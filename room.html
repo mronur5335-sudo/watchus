@@ -8,31 +8,38 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #0a0c12; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; color: #ddd; overflow: hidden; }
         .header { background: #151b25; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3548; }
-        .v-container { flex: 1; background: #000; position: relative; }
-        video, iframe, #yt { width: 100%; height: 100%; border: none; }
-        #syncOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 100; flex-direction: column; align-items: center; justify-content: center; }
-        .sync-btn { background: #ff4757; color: white; padding: 15px 30px; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.2rem; border: none; box-shadow: 0 0 20px rgba(255,71,87,0.5); }
+        .v-container { flex: 1; background: #000; position: relative; min-height: 300px; }
+        #yt, #ifr, #vid { width: 100%; height: 100%; position: absolute; top: 0; left: 0; border: none; }
+        
+        /* Senkronize Et Butonu */
+        #syncOverlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); display: none; z-index: 999; 
+            flex-direction: column; align-items: center; justify-content: center; 
+        }
+        .sync-btn { background: #ff4757; color: white; padding: 20px 40px; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.4rem; border: none; box-shadow: 0 0 30px rgba(255,71,87,0.4); }
+
         .chat { flex: 0 0 35%; background: #121722; display: flex; flex-direction: column; border-top: 1px solid #283040; }
-        .messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 5px; }
-        .msg { background: #1f283b; padding: 8px; border-radius: 10px; font-size: 0.9rem; max-width: 80%; }
+        .messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { background: #1f283b; padding: 10px; border-radius: 12px; font-size: 0.95rem; max-width: 85%; }
         .msg.own { align-self: flex-end; background: #2b4b7a; }
-        .input-box { padding: 10px; display: flex; gap: 5px; background: #0f131c; }
+        .input-box { padding: 15px; display: flex; gap: 10px; background: #0f131c; }
         input { flex: 1; background: #1e2638; border: none; padding: 12px; border-radius: 10px; color: #fff; outline: none; }
     </style>
 </head>
 <body>
     <div id="syncOverlay">
-        <button class="sync-btn" id="syncAction">VİDEO BAŞLADI - SENKRONİZE OL</button>
+        <button class="sync-btn" id="syncAction">▶ VİDEOYU BAŞLAT VE EŞİTLE</button>
     </div>
 
     <div class="header">
-        <div>🎬 <b>W4TCH US</b> <span id="cDisp" style="color:#a0b4ff; margin-left:10px; font-family:monospace;"></span></div>
+        <div>🎬 <b>W4TCH US</b> <span id="cDisp" style="color:#a0b4ff; margin-left:10px; font-weight:bold;"></span></div>
         <div id="uDisp">...</div>
     </div>
 
     <div class="v-container">
         <div id="yt"></div>
-        <iframe id="ifr" style="display:none"></iframe>
+        <iframe id="ifr" style="display:none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
         <video id="vid" style="display:none" playsinline></video>
     </div>
 
@@ -40,7 +47,7 @@
         <div class="messages" id="msgs"></div>
         <div class="input-box">
             <input type="text" id="mInp" placeholder="Mesaj yazın...">
-            <button id="mBtn" style="background:#4f6cdb; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer">Gönder</button>
+            <button id="mBtn" style="background:#4f6cdb; color:white; border:none; padding:10px 25px; border-radius:10px; cursor:pointer; font-weight:bold;">Gönder</button>
         </div>
     </div>
 
@@ -58,27 +65,33 @@
         document.getElementById('cDisp').textContent = roomCode;
 
         db.collection('rooms').doc(roomCode).get().then(doc => {
+            if(!doc.exists) return alert("Oda bulunamadı!");
             const d = doc.data();
             isAdmin = (d.admin === userName);
             document.getElementById('uDisp').textContent = (isAdmin ? "👑 " : "👤 ") + userName;
 
-            if(d.type === 'youtube' || d.url.includes('youtu')) {
+            // URL TİPİNE GÖRE OYNATICI SEÇİMİ
+            if (d.url.includes("youtube.com") || d.url.includes("youtu.be")) {
                 loadYT(d.url);
-            } else if(d.url.match(/\.(mp4|webm|ogg)$/i)) {
+            } else if (d.url.match(/\.(mp4|webm|ogg)$/i)) {
                 const v = document.getElementById('vid');
                 v.style.display = 'block'; v.src = d.url; v.controls = isAdmin;
                 setupVid(v);
             } else {
-                document.getElementById('ifr').style.display = 'block';
-                document.getElementById('ifr').src = d.url;
+                const ifr = document.getElementById('ifr');
+                ifr.style.display = 'block';
+                ifr.src = d.url;
             }
         });
 
-        // --- YOUTUBE SİSTEMİ ---
+        // --- YOUTUBE SİSTEMİ (GELİŞTİRİLMİŞ) ---
         function loadYT(url) {
-            let vId = "";
-            if(url.includes("v=")) vId = url.split("v=")[1].split("&")[0];
-            else if(url.includes("youtu.be/")) vId = url.split("youtu.be/")[1];
+            // Video ID Ayıklama (Regex)
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            const vId = (match && match[2].length == 11) ? match[2] : null;
+
+            if(!vId) return alert("Geçersiz YouTube linki!");
 
             const tag = document.createElement('script');
             tag.src = "https://www.youtube.com/iframe_api";
@@ -87,7 +100,12 @@
             window.onYouTubeIframeAPIReady = () => {
                 ytPlayer = new YT.Player('yt', {
                     videoId: vId,
-                    playerVars: { 'autoplay': 0, 'controls': isAdmin ? 1 : 0, 'rel': 0 },
+                    playerVars: { 
+                        'autoplay': 0, 
+                        'controls': isAdmin ? 1 : 0, 
+                        'rel': 0,
+                        'origin': window.location.origin 
+                    },
                     events: {
                         'onStateChange': (e) => {
                             if(isAdmin) {
@@ -100,22 +118,23 @@
             };
         }
 
-        // --- DIRECT VIDEO SİSTEMİ ---
         function setupVid(v) {
             if(isAdmin) {
                 v.onplay = () => db.collection('rooms').doc(roomCode).update({ status: 1, time: v.currentTime });
                 v.onpause = () => db.collection('rooms').doc(roomCode).update({ status: 0, time: v.currentTime });
-                setInterval(() => { if(!v.paused) db.collection('rooms').doc(roomCode).update({ time: v.currentTime }); }, 3000);
+                setInterval(() => { if(!v.paused) db.collection('rooms').doc(roomCode).update({ time: v.currentTime }); }, 4000);
             }
         }
 
-        // --- SENKRONİZASYON DİNLEYİCİ ---
+        // --- SENKRONİZASYON TAKİBİ ---
         db.collection('rooms').doc(roomCode).onSnapshot(doc => {
             const d = doc.data();
             if(!isAdmin && d) {
+                // Admin başlattıysa butonu göster (Autoplay engelini aşmak için)
                 if(d.status == 1 && lastStatus == 0) {
                     document.getElementById('syncOverlay').style.display = 'flex';
                 }
+                // Admin durdurduysa bizde de dursun
                 if(d.status == 0) {
                     const v = document.getElementById('vid');
                     if(v.src) v.pause();
@@ -126,23 +145,30 @@
             }
         });
 
+        // Senkronize Et Butonuna Tıklama
         document.getElementById('syncAction').onclick = () => {
             db.collection('rooms').doc(roomCode).get().then(doc => {
                 const d = doc.data();
                 const v = document.getElementById('vid');
-                if(v.src) { v.currentTime = d.time; v.play(); }
-                if(ytPlayer && ytPlayer.playVideo) { ytPlayer.seekTo(d.time); ytPlayer.playVideo(); }
+                if(v.style.display !== 'none') { v.currentTime = d.time; v.play(); }
+                if(ytPlayer) { ytPlayer.seekTo(d.time); ytPlayer.playVideo(); }
                 document.getElementById('syncOverlay').style.display = 'none';
             });
         };
 
-        // --- CHAT ---
+        // --- CHAT SİSTEMİ ---
         const mBox = document.getElementById('msgs'), mInp = document.getElementById('mInp');
-        document.getElementById('mBtn').onclick = () => {
-            if(!mInp.value) return;
-            db.collection('rooms').doc(roomCode).collection('messages').add({ s: userName, t: mInp.value, ts: firebase.firestore.FieldValue.serverTimestamp() });
+        document.getElementById('mBtn').onclick = sendMessage;
+        mInp.onkeypress = (e) => e.key === 'Enter' && sendMessage();
+
+        function sendMessage() {
+            if(!mInp.value.trim()) return;
+            db.collection('rooms').doc(roomCode).collection('messages').add({ 
+                s: userName, t: mInp.value, ts: firebase.firestore.FieldValue.serverTimestamp() 
+            });
             mInp.value = "";
-        };
+        }
+
         db.collection('rooms').doc(roomCode).collection('messages').orderBy('ts').onSnapshot(q => {
             q.docChanges().forEach(c => { if(c.type === 'added') {
                 const m = c.doc.data();
