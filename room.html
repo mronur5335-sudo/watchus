@@ -58,6 +58,50 @@
             align-items: center;
             gap: 6px;
         }
+        .host-badge {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #000;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            margin-left: 8px;
+        }
+        /* Video kontrol paneli (sadece host için) */
+        .video-controls {
+            background: #1a2332;
+            padding: 10px 20px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            border-bottom: 1px solid #2d3548;
+        }
+        .video-controls.active {
+            display: flex;
+        }
+        .control-btn {
+            background: #4f6cdb;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .control-btn:hover { background: #3b56b5; }
+        .control-btn:disabled {
+            background: #2d3a57;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .sync-status {
+            color: #9aa4bf;
+            font-size: 0.9rem;
+            margin-left: 15px;
+        }
         /* iframe alanı */
         .video-wrapper {
             flex: 1 1 60vh;
@@ -95,10 +139,24 @@
             align-self: flex-start;
             word-wrap: break-word;
             line-height: 1.4;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .message.own {
             background: #2b4b7a;
             align-self: flex-end;
+        }
+        .message.system {
+            background: transparent;
+            border: 1px dashed #4a5568;
+            color: #9aa4bf;
+            font-style: italic;
+            align-self: center;
+            font-size: 0.9rem;
+            padding: 8px 16px;
         }
         .msg-sender {
             font-weight: 600;
@@ -143,6 +201,7 @@
             .room-header { flex-direction: column; align-items: start; }
             .video-wrapper { flex: 1 1 50vh; }
             .chat-section { max-height: 45vh; }
+            .video-controls { flex-wrap: wrap; }
         }
     </style>
 </head>
@@ -152,10 +211,18 @@
             <span>🎬 SyncStream</span>
             <span class="room-code" id="roomCodeDisplay"></span>
         </div>
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; gap: 8px; align-items: center;">
             <button class="copy-btn" id="copyInviteBtn">📋 Davet Linkini Kopyala</button>
             <span class="user-badge" id="userNameDisplay">👤 yükleniyor...</span>
         </div>
+    </div>
+
+    <!-- Video Kontrol Paneli (Sadece Host Görür) -->
+    <div class="video-controls" id="videoControls">
+        <button class="control-btn" id="playBtn">▶️ Oynat</button>
+        <button class="control-btn" id="pauseBtn">⏸️ Durdur</button>
+        <button class="control-btn" id="syncBtn">🔄 Senkronize Et</button>
+        <span class="sync-status" id="syncStatus">Senkronize ediliyor...</span>
     </div>
 
     <div class="video-wrapper">
@@ -207,15 +274,42 @@
         const chatInput = document.getElementById('chatInput');
         const sendBtn = document.getElementById('sendBtn');
         const copyBtn = document.getElementById('copyInviteBtn');
+        const videoControls = document.getElementById('videoControls');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const syncBtn = document.getElementById('syncBtn');
+        const syncStatus = document.getElementById('syncStatus');
 
         roomCodeSpan.textContent = roomCode;
-        userNameSpan.textContent = `👤 ${userName}`;
+        
+        // Değişkenler
+        let isHost = false;
+        let roomData = null;
+        let userJoined = false;
 
-        // Oda bilgisini Firestore'dan al ve iframe'i yükle
+        // Oda bilgisini Firestore'dan al
         db.collection('rooms').doc(roomCode).get().then(doc => {
             if (doc.exists) {
-                const url = doc.data().url;
+                roomData = doc.data();
+                const url = roomData.url;
                 streamFrame.src = url;
+                
+                // Host kontrolü
+                if (roomData.createdBy === userName) {
+                    isHost = true;
+                    videoControls.classList.add('active');
+                    userNameSpan.innerHTML = `👤 ${userName} <span class="host-badge">HOST</span>`;
+                    syncStatus.textContent = 'Video kontrolleri aktif';
+                } else {
+                    userNameSpan.textContent = `👤 ${userName}`;
+                    syncStatus.textContent = 'Host senkronizasyonu bekleniyor...';
+                }
+
+                // Kullanıcı giriş bildirimi gönder (sadece bir kere)
+                sendSystemMessage(`${userName} odaya katıldı`);
+                
+                // Kullanıcıyı aktif kullanıcılar listesine ekle
+                addActiveUser();
             } else {
                 alert('Oda bulunamadı!');
                 window.location.href = 'index.html';
@@ -224,10 +318,38 @@
             console.error('Oda yüklenemedi', err);
         });
 
+        // Aktif kullanıcıları yönet
+        function addActiveUser() {
+            const userRef = db.collection('rooms').doc(roomCode).collection('activeUsers').doc(userName);
+            userRef.set({
+                joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            // Sayfa kapatıldığında kullanıcıyı sil
+            window.addEventListener('beforeunload', () => {
+                userRef.delete();
+                sendSystemMessage(`${userName} odadan ayrıldı`);
+            });
+        }
+
+        // Sistem mesajı gönder (giriş/çıkış bildirimleri)
+        async function sendSystemMessage(text) {
+            try {
+                await db.collection('rooms').doc(roomCode).collection('messages').add({
+                    sender: 'Sistem',
+                    text: text,
+                    type: 'system',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (err) {
+                console.error('Sistem mesajı gönderilemedi', err);
+            }
+        }
+
         // GERÇEK ZAMANLI SOHBET
         const messagesRef = db.collection('rooms').doc(roomCode).collection('messages').orderBy('timestamp');
 
-        // Yeni mesaj geldikçe listeyi güncelle
         messagesRef.onSnapshot(snapshot => {
             snapshot.docChanges().forEach(change => {
                 if (change.type === 'added') {
@@ -235,7 +357,6 @@
                     displayMessage(msg, change.doc.id);
                 }
             });
-            // Otomatik kaydır (en alta)
             chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
         });
 
@@ -249,6 +370,7 @@
                 await db.collection('rooms').doc(roomCode).collection('messages').add({
                     sender: userName,
                     text: text,
+                    type: 'user',
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
             } catch (err) {
@@ -262,21 +384,31 @@
             if (e.key === 'Enter') sendMessage();
         });
 
-        // Mesajı ekrana bas (yerel)
+        // Mesajı ekrana bas
         function displayMessage(msg, docId) {
+            // Aynı mesajı tekrar gösterme kontrolü
+            if (document.getElementById(`msg-${docId}`)) return;
+            
             const msgDiv = document.createElement('div');
+            msgDiv.id = `msg-${docId}`;
             msgDiv.classList.add('message');
-            // Gönderen kişi ben miyim?
-            if (msg.sender === userName) {
-                msgDiv.classList.add('own');
+            
+            if (msg.type === 'system') {
+                msgDiv.classList.add('system');
+                msgDiv.innerHTML = `<div class="msg-text">${escapeHtml(msg.text)}</div>`;
+            } else {
+                if (msg.sender === userName) {
+                    msgDiv.classList.add('own');
+                }
+                msgDiv.innerHTML = `<div class="msg-sender">${escapeHtml(msg.sender)}</div>
+                                    <div class="msg-text">${escapeHtml(msg.text)}</div>`;
             }
-            msgDiv.innerHTML = `<div class="msg-sender">${escapeHtml(msg.sender)}</div>
-                                <div class="msg-text">${escapeHtml(msg.text)}</div>`;
             chatMessagesDiv.appendChild(msgDiv);
         }
 
         // Basit XSS koruması
         function escapeHtml(unsafe) {
+            if (!unsafe) return '';
             return unsafe.replace(/[&<>"]/g, function(m) {
                 if(m === '&') return '&amp;'; if(m === '<') return '&lt;';
                 if(m === '>') return '&gt;'; if(m === '"') return '&quot;';
@@ -294,6 +426,113 @@
                 prompt('Linki manuel kopyala:', inviteUrl);
             });
         });
+
+        // ================= VIDEO SENKRONIZASYON =================
+        
+        // Video senkronizasyon durumunu dinle
+        db.collection('rooms').doc(roomCode).collection('videoSync').doc('state')
+            .onSnapshot((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    handleVideoSync(data);
+                }
+            });
+
+        function handleVideoSync(data) {
+            if (isHost) return; // Host kendi senkronizasyonunu dinlemez
+            
+            const now = Date.now();
+            const syncTime = data.timestamp?.toMillis() || now;
+            const delay = (now - syncTime) / 1000; // Saniye cinsinden gecikme
+            
+            let currentTime = data.currentTime || 0;
+            if (data.isPlaying) {
+                currentTime += delay; // Oynatma sırasında geçen süreyi ekle
+            }
+            
+            // iframe ile iletişim kur (postMessage)
+            sendToVideoPlayer({
+                action: data.isPlaying ? 'play' : 'pause',
+                currentTime: currentTime
+            });
+            
+            syncStatus.textContent = data.isPlaying ? '▶️ Oynatılıyor' : '⏸️ Duraklatıldı';
+            syncStatus.textContent += ` (${formatTime(currentTime)})`;
+        }
+
+        // Host için kontrol butonları
+        if (playBtn) {
+            playBtn.addEventListener('click', () => updateVideoState(true));
+        }
+        if (pauseBtn) {
+            pauseBtn.addEventListener('click', () => updateVideoState(false));
+        }
+        if (syncBtn) {
+            syncBtn.addEventListener('click', () => {
+                // Tüm kullanıcıları senkronize et
+                getCurrentVideoTime().then(time => {
+                    updateVideoState(true, time);
+                    syncStatus.textContent = `🔄 Senkronize edildi: ${formatTime(time)}`;
+                });
+            });
+        }
+
+        async function updateVideoState(playing, specificTime = null) {
+            try {
+                let currentTime = specificTime;
+                if (currentTime === null) {
+                    currentTime = await getCurrentVideoTime();
+                }
+                
+                await db.collection('rooms').doc(roomCode).collection('videoSync').doc('state').set({
+                    isPlaying: playing,
+                    currentTime: currentTime,
+                    updatedBy: userName,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (err) {
+                console.error('Video durumu güncellenemedi', err);
+            }
+        }
+
+        // Video player'dan mevcut zamanı al (simülasyon)
+        function getCurrentVideoTime() {
+            return new Promise((resolve) => {
+                // Gerçek uygulamada iframe ile iletişim kurulur
+                // Şimdilik simülasyon yapıyoruz
+                resolve(0);
+            });
+        }
+
+        // Video player'a komut gönder
+        function sendToVideoPlayer(command) {
+            // iframe içindeki video player'a postMessage gönder
+            try {
+                streamFrame.contentWindow.postMessage({
+                    type: 'syncstream-command',
+                    ...command
+                }, '*');
+            } catch (e) {
+                console.log('Video player iletişimi:', command);
+            }
+        }
+
+        // Zaman formatı (saniye -> MM:SS)
+        function formatTime(seconds) {
+            if (!seconds) return '00:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Periyodik olarak aktif kullanıcıları güncelle
+        setInterval(() => {
+            if (roomCode && userName) {
+                db.collection('rooms').doc(roomCode).collection('activeUsers').doc(userName).update({
+                    lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+        }, 30000); // Her 30 saniyede bir
     </script>
 </body>
-  </html>
+</html>
