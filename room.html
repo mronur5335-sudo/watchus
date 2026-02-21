@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SyncStream · Oda</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -13,6 +13,7 @@
             display: flex;
             flex-direction: column;
             color: #ddd;
+            overflow: hidden;
         }
         /* üst bilgi */
         .room-header {
@@ -24,6 +25,7 @@
             justify-content: space-between;
             border-bottom: 1px solid #2d3548;
             gap: 10px;
+            z-index: 100;
         }
         .room-title {
             display: flex;
@@ -48,8 +50,32 @@
             border-radius: 30px;
             font-size: 0.9rem;
             cursor: pointer;
+            transition: all 0.2s;
         }
-        .copy-btn:active { background: #4a5a7a; }
+        .copy-btn:hover { background: #4a5a7a; }
+        .copy-btn:active { transform: scale(0.95); }
+        
+        .users-btn {
+            background: #4f6cdb;
+            border: none;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .users-btn:hover { background: #3b56b5; }
+        .users-btn .count {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        
         .user-badge {
             background: #2d4055;
             padding: 8px 16px;
@@ -67,15 +93,17 @@
             font-size: 0.75rem;
             margin-left: 8px;
         }
-        /* Video kontrol paneli (sadece host için) */
+        
+        /* Video kontrol paneli */
         .video-controls {
             background: #1a2332;
-            padding: 10px 20px;
+            padding: 12px 20px;
             display: none;
             align-items: center;
             justify-content: center;
             gap: 15px;
             border-bottom: 1px solid #2d3548;
+            flex-wrap: wrap;
         }
         .video-controls.active {
             display: flex;
@@ -90,43 +118,170 @@
             cursor: pointer;
             font-weight: 600;
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
-        .control-btn:hover { background: #3b56b5; }
-        .control-btn:disabled {
-            background: #2d3a57;
-            cursor: not-allowed;
-            opacity: 0.6;
+        .control-btn:hover { background: #3b56b5; transform: translateY(-2px); }
+        .control-btn:active { transform: translateY(0); }
+        
+        .time-display {
+            background: #0f131c;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-family: monospace;
+            font-size: 1rem;
+            color: #c0d0ff;
+            min-width: 100px;
+            text-align: center;
         }
+        
         .sync-status {
             color: #9aa4bf;
-            font-size: 0.9rem;
-            margin-left: 15px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
-        /* iframe alanı */
+        .sync-status.online::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Video alanı */
         .video-wrapper {
-            flex: 1 1 60vh;
+            flex: 1;
             background: #000;
             position: relative;
-            min-height: 250px;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
         }
+        
+        #videoContainer {
+            flex: 1;
+            position: relative;
+            background: #000;
+        }
+        
         iframe {
             width: 100%;
             height: 100%;
             border: none;
         }
-        /* sohbet bölümü */
+        
+        /* Kilitli iframe overlay (Host dışı için) */
+        .iframe-lock {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            z-index: 50;
+            cursor: not-allowed;
+        }
+        .iframe-lock::after {
+            content: '🔒 Host Kontrolünde';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 40px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .iframe-lock:hover::after {
+            opacity: 1;
+        }
+        
+        /* Google Drive özel kontroller */
+        .drive-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            padding: 15px 25px;
+            border-radius: 50px;
+            display: none;
+            align-items: center;
+            gap: 20px;
+            z-index: 60;
+            border: 1px solid #444;
+        }
+        .drive-controls.active {
+            display: flex;
+        }
+        .drive-btn {
+            background: transparent;
+            border: 2px solid #fff;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .drive-btn:hover {
+            background: white;
+            color: black;
+            transform: scale(1.1);
+        }
+        .drive-progress {
+            width: 300px;
+            height: 6px;
+            background: #444;
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+        }
+        .drive-progress-bar {
+            height: 100%;
+            background: #4f6cdb;
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.1s;
+        }
+        .drive-time {
+            color: white;
+            font-family: monospace;
+            font-size: 0.9rem;
+            min-width: 100px;
+            text-align: center;
+        }
+        
+        /* Sohbet */
         .chat-section {
-            flex: 1 1 auto;
+            height: 35%;
+            min-height: 250px;
             background: #121722;
             display: flex;
             flex-direction: column;
             border-top: 1px solid #283040;
-            max-height: 40vh;
         }
         .chat-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 16px 16px 8px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -158,14 +313,37 @@
             font-size: 0.9rem;
             padding: 8px 16px;
         }
+        .message.private {
+            background: #4a1f4a;
+            border-left: 3px solid #ff6b9d;
+        }
         .msg-sender {
             font-weight: 600;
             font-size: 0.8rem;
             color: #aec3f0;
             margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .msg-sender .to {
+            color: #ff6b9d;
+            font-size: 0.75rem;
         }
         .msg-text {
             font-size: 0.95rem;
+        }
+        .msg-link-preview {
+            margin-top: 8px;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            border-left: 3px solid #4f6cdb;
+        }
+        .msg-link-preview a {
+            color: #6d85d9;
+            text-decoration: none;
+            font-weight: 600;
         }
         .chat-input-area {
             display: flex;
@@ -193,15 +371,213 @@
             font-size: 1.5rem;
             font-weight: bold;
             cursor: pointer;
+            transition: all 0.2s;
         }
-        .chat-input-area button:active { background: #3b56b5; }
+        .chat-input-area button:hover { background: #3b56b5; }
+        
+        /* Kullanıcılar Paneli */
+        .users-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: #1a1f2b;
+            border-left: 1px solid #2d3548;
+            z-index: 1000;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -5px 0 30px rgba(0,0,0,0.5);
+        }
+        .users-panel.active {
+            right: 0;
+        }
+        .users-panel-header {
+            padding: 20px;
+            background: #151b25;
+            border-bottom: 1px solid #2d3548;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .users-panel-header h3 {
+            margin: 0;
+            color: #c0d0ff;
+        }
+        .close-panel {
+            background: none;
+            border: none;
+            color: #9aa4bf;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+        }
+        .users-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        .user-item {
+            background: #252c3b;
+            padding: 15px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .user-item:hover {
+            background: #2d3648;
+            transform: translateX(-5px);
+        }
+        .user-item.selected {
+            background: #2b4b7a;
+            border: 2px solid #4f6cdb;
+        }
+        .user-item.host {
+            border-left: 4px solid #ffd700;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: #4f6cdb;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        .user-name {
+            font-weight: 600;
+            color: #eef2fb;
+        }
+        .user-status {
+            font-size: 0.75rem;
+            color: #4ade80;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .user-status::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: #4ade80;
+            border-radius: 50%;
+        }
+        .user-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .action-btn {
+            background: #33415c;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .action-btn:hover { background: #4f6cdb; }
+        
+        /* Link Önerme Modal */
+        .link-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .link-modal.active {
+            display: flex;
+        }
+        .link-modal-content {
+            background: #1a1f2b;
+            padding: 30px;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid #2d3548;
+        }
+        .link-modal h3 {
+            margin-bottom: 20px;
+            color: #c0d0ff;
+        }
+        .link-input {
+            width: 100%;
+            background: #0f131c;
+            border: 1px solid #2e3648;
+            border-radius: 16px;
+            padding: 16px;
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+        .link-modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        .modal-btn {
+            padding: 12px 24px;
+            border-radius: 24px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-btn.cancel {
+            background: #33415c;
+            color: white;
+        }
+        .modal-btn.send {
+            background: #4f6cdb;
+            color: white;
+        }
+        .modal-btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+        
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+        .overlay.active {
+            display: block;
+        }
 
-        /* mobil düzen */
-        @media (max-width: 600px) {
-            .room-header { flex-direction: column; align-items: start; }
-            .video-wrapper { flex: 1 1 50vh; }
-            .chat-section { max-height: 45vh; }
-            .video-controls { flex-wrap: wrap; }
+        @media (max-width: 768px) {
+            .room-header { 
+                flex-direction: column; 
+                align-items: stretch;
+                gap: 10px;
+            }
+            .room-title { justify-content: center; }
+            .users-panel { width: 100%; right: -100%; }
+            .drive-progress { width: 200px; }
+            .chat-section { height: 40%; }
         }
     </style>
 </head>
@@ -211,37 +587,79 @@
             <span>🎬 SyncStream</span>
             <span class="room-code" id="roomCodeDisplay"></span>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-            <button class="copy-btn" id="copyInviteBtn">📋 Davet Linkini Kopyala</button>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center;">
+            <button class="users-btn" id="usersBtn">
+                👥 Kullanıcılar <span class="count" id="userCount">0</span>
+            </button>
+            <button class="copy-btn" id="copyInviteBtn">📋 Davet Linki</button>
             <span class="user-badge" id="userNameDisplay">👤 yükleniyor...</span>
         </div>
     </div>
 
-    <!-- Video Kontrol Paneli (Sadece Host Görür) -->
+    <!-- Video Kontrol Paneli (Sadece Host) -->
     <div class="video-controls" id="videoControls">
         <button class="control-btn" id="playBtn">▶️ Oynat</button>
         <button class="control-btn" id="pauseBtn">⏸️ Durdur</button>
-        <button class="control-btn" id="syncBtn">🔄 Senkronize Et</button>
-        <span class="sync-status" id="syncStatus">Senkronize ediliyor...</span>
+        <button class="control-btn" id="syncBtn">🔄 Senkronize</button>
+        <div class="time-display" id="timeDisplay">00:00 / 00:00</div>
+        <span class="sync-status online" id="syncStatus">Senkronize</span>
     </div>
 
+    <!-- Video Alanı -->
     <div class="video-wrapper">
-        <iframe id="streamFrame" sandbox="allow-same-origin allow-scripts allow-popups allow-forms" allowfullscreen></iframe>
+        <div id="videoContainer">
+            <iframe id="streamFrame" sandbox="allow-scripts allow-same-origin" allowfullscreen></iframe>
+            <!-- Host dışı için kilit overlay -->
+            <div class="iframe-lock" id="iframeLock"></div>
+            
+            <!-- Google Drive Özel Kontroller (Sadece Host) -->
+            <div class="drive-controls" id="driveControls">
+                <button class="drive-btn" id="drivePlayBtn">▶️</button>
+                <div class="drive-progress" id="driveProgress">
+                    <div class="drive-progress-bar" id="driveProgressBar"></div>
+                </div>
+                <span class="drive-time" id="driveTime">00:00 / 00:00</span>
+            </div>
+        </div>
     </div>
 
+    <!-- Sohbet -->
     <div class="chat-section">
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input-area">
-            <input type="text" id="chatInput" placeholder="Mesajınız..." maxlength="200">
+            <input type="text" id="chatInput" placeholder="Mesajınız..." maxlength="500">
             <button id="sendBtn">➤</button>
+        </div>
+    </div>
+
+    <!-- Kullanıcılar Paneli -->
+    <div class="overlay" id="overlay"></div>
+    <div class="users-panel" id="usersPanel">
+        <div class="users-panel-header">
+            <h3>👥 Odadaki Kişiler</h3>
+            <button class="close-panel" id="closePanel">✕</button>
+        </div>
+        <div class="users-list" id="usersList"></div>
+    </div>
+
+    <!-- Link Önerme Modal -->
+    <div class="link-modal" id="linkModal">
+        <div class="link-modal-content">
+            <h3>🔗 Link Öner - <span id="targetUserName"></span></h3>
+            <input type="url" class="link-input" id="linkInput" placeholder="https://...">
+            <div class="link-modal-buttons">
+                <button class="modal-btn cancel" id="cancelLink">İptal</button>
+                <button class="modal-btn send" id="sendLink">Gönder</button>
+            </div>
         </div>
     </div>
 
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
     <script>
-        // ===== SENİN FIREBASE KONFİGÜRASYONUN =====
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyDtl18Hp2i2P_r6Xry_5xuBkp7gaysrlTY",
             authDomain: "film-7ac05.firebaseapp.com",
@@ -251,288 +669,11 @@
             appId: "1:650477853428:web:49a179ee55a32dbdb21ca1",
             measurementId: "G-SBC91W9CDC"
         };
-        // =========================================
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // URL'den oda kodu ve kullanıcı adını al
+        // URL Parametreleri
         const urlParams = new URLSearchParams(window.location.search);
         const roomCode = urlParams.get('room');
-        const userName = urlParams.get('name') || 'İsimsiz';
-
-        if (!roomCode) {
-            alert('Oda kodu eksik! Ana sayfaya yönlendiriliyorsunuz.');
-            window.location.href = 'index.html';
-        }
-
-        // DOM
-        const roomCodeSpan = document.getElementById('roomCodeDisplay');
-        const userNameSpan = document.getElementById('userNameDisplay');
-        const streamFrame = document.getElementById('streamFrame');
-        const chatMessagesDiv = document.getElementById('chatMessages');
-        const chatInput = document.getElementById('chatInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const copyBtn = document.getElementById('copyInviteBtn');
-        const videoControls = document.getElementById('videoControls');
-        const playBtn = document.getElementById('playBtn');
-        const pauseBtn = document.getElementById('pauseBtn');
-        const syncBtn = document.getElementById('syncBtn');
-        const syncStatus = document.getElementById('syncStatus');
-
-        roomCodeSpan.textContent = roomCode;
-        
-        // Değişkenler
-        let isHost = false;
-        let roomData = null;
-        let userJoined = false;
-
-        // Oda bilgisini Firestore'dan al
-        db.collection('rooms').doc(roomCode).get().then(doc => {
-            if (doc.exists) {
-                roomData = doc.data();
-                const url = roomData.url;
-                streamFrame.src = url;
-                
-                // Host kontrolü
-                if (roomData.createdBy === userName) {
-                    isHost = true;
-                    videoControls.classList.add('active');
-                    userNameSpan.innerHTML = `👤 ${userName} <span class="host-badge">HOST</span>`;
-                    syncStatus.textContent = 'Video kontrolleri aktif';
-                } else {
-                    userNameSpan.textContent = `👤 ${userName}`;
-                    syncStatus.textContent = 'Host senkronizasyonu bekleniyor...';
-                }
-
-                // Kullanıcı giriş bildirimi gönder (sadece bir kere)
-                sendSystemMessage(`${userName} odaya katıldı`);
-                
-                // Kullanıcıyı aktif kullanıcılar listesine ekle
-                addActiveUser();
-            } else {
-                alert('Oda bulunamadı!');
-                window.location.href = 'index.html';
-            }
-        }).catch(err => {
-            console.error('Oda yüklenemedi', err);
-        });
-
-        // Aktif kullanıcıları yönet
-        function addActiveUser() {
-            const userRef = db.collection('rooms').doc(roomCode).collection('activeUsers').doc(userName);
-            userRef.set({
-                joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            
-            // Sayfa kapatıldığında kullanıcıyı sil
-            window.addEventListener('beforeunload', () => {
-                userRef.delete();
-                sendSystemMessage(`${userName} odadan ayrıldı`);
-            });
-        }
-
-        // Sistem mesajı gönder (giriş/çıkış bildirimleri)
-        async function sendSystemMessage(text) {
-            try {
-                await db.collection('rooms').doc(roomCode).collection('messages').add({
-                    sender: 'Sistem',
-                    text: text,
-                    type: 'system',
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (err) {
-                console.error('Sistem mesajı gönderilemedi', err);
-            }
-        }
-
-        // GERÇEK ZAMANLI SOHBET
-        const messagesRef = db.collection('rooms').doc(roomCode).collection('messages').orderBy('timestamp');
-
-        messagesRef.onSnapshot(snapshot => {
-            snapshot.docChanges().forEach(change => {
-                if (change.type === 'added') {
-                    const msg = change.doc.data();
-                    displayMessage(msg, change.doc.id);
-                }
-            });
-            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
-        });
-
-        // Mesaj gönderme
-        async function sendMessage() {
-            const text = chatInput.value.trim();
-            if (!text) return;
-            chatInput.value = '';
-
-            try {
-                await db.collection('rooms').doc(roomCode).collection('messages').add({
-                    sender: userName,
-                    text: text,
-                    type: 'user',
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (err) {
-                console.error('Mesaj gönderilemedi', err);
-                alert('Mesaj gönderilemedi. Tekrar dene.');
-            }
-        }
-
-        sendBtn.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
-
-        // Mesajı ekrana bas
-        function displayMessage(msg, docId) {
-            // Aynı mesajı tekrar gösterme kontrolü
-            if (document.getElementById(`msg-${docId}`)) return;
-            
-            const msgDiv = document.createElement('div');
-            msgDiv.id = `msg-${docId}`;
-            msgDiv.classList.add('message');
-            
-            if (msg.type === 'system') {
-                msgDiv.classList.add('system');
-                msgDiv.innerHTML = `<div class="msg-text">${escapeHtml(msg.text)}</div>`;
-            } else {
-                if (msg.sender === userName) {
-                    msgDiv.classList.add('own');
-                }
-                msgDiv.innerHTML = `<div class="msg-sender">${escapeHtml(msg.sender)}</div>
-                                    <div class="msg-text">${escapeHtml(msg.text)}</div>`;
-            }
-            chatMessagesDiv.appendChild(msgDiv);
-        }
-
-        // Basit XSS koruması
-        function escapeHtml(unsafe) {
-            if (!unsafe) return '';
-            return unsafe.replace(/[&<>"]/g, function(m) {
-                if(m === '&') return '&amp;'; if(m === '<') return '&lt;';
-                if(m === '>') return '&gt;'; if(m === '"') return '&quot;';
-                return m;
-            });
-        }
-
-        // Davet linki kopyala
-        copyBtn.addEventListener('click', () => {
-            const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
-            navigator.clipboard.writeText(inviteUrl).then(() => {
-                copyBtn.textContent = '✅ Kopyalandı!';
-                setTimeout(() => { copyBtn.textContent = '📋 Davet Linkini Kopyala'; }, 2000);
-            }).catch(() => {
-                prompt('Linki manuel kopyala:', inviteUrl);
-            });
-        });
-
-        // ================= VIDEO SENKRONIZASYON =================
-        
-        // Video senkronizasyon durumunu dinle
-        db.collection('rooms').doc(roomCode).collection('videoSync').doc('state')
-            .onSnapshot((doc) => {
-                if (doc.exists) {
-                    const data = doc.data();
-                    handleVideoSync(data);
-                }
-            });
-
-        function handleVideoSync(data) {
-            if (isHost) return; // Host kendi senkronizasyonunu dinlemez
-            
-            const now = Date.now();
-            const syncTime = data.timestamp?.toMillis() || now;
-            const delay = (now - syncTime) / 1000; // Saniye cinsinden gecikme
-            
-            let currentTime = data.currentTime || 0;
-            if (data.isPlaying) {
-                currentTime += delay; // Oynatma sırasında geçen süreyi ekle
-            }
-            
-            // iframe ile iletişim kur (postMessage)
-            sendToVideoPlayer({
-                action: data.isPlaying ? 'play' : 'pause',
-                currentTime: currentTime
-            });
-            
-            syncStatus.textContent = data.isPlaying ? '▶️ Oynatılıyor' : '⏸️ Duraklatıldı';
-            syncStatus.textContent += ` (${formatTime(currentTime)})`;
-        }
-
-        // Host için kontrol butonları
-        if (playBtn) {
-            playBtn.addEventListener('click', () => updateVideoState(true));
-        }
-        if (pauseBtn) {
-            pauseBtn.addEventListener('click', () => updateVideoState(false));
-        }
-        if (syncBtn) {
-            syncBtn.addEventListener('click', () => {
-                // Tüm kullanıcıları senkronize et
-                getCurrentVideoTime().then(time => {
-                    updateVideoState(true, time);
-                    syncStatus.textContent = `🔄 Senkronize edildi: ${formatTime(time)}`;
-                });
-            });
-        }
-
-        async function updateVideoState(playing, specificTime = null) {
-            try {
-                let currentTime = specificTime;
-                if (currentTime === null) {
-                    currentTime = await getCurrentVideoTime();
-                }
-                
-                await db.collection('rooms').doc(roomCode).collection('videoSync').doc('state').set({
-                    isPlaying: playing,
-                    currentTime: currentTime,
-                    updatedBy: userName,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (err) {
-                console.error('Video durumu güncellenemedi', err);
-            }
-        }
-
-        // Video player'dan mevcut zamanı al (simülasyon)
-        function getCurrentVideoTime() {
-            return new Promise((resolve) => {
-                // Gerçek uygulamada iframe ile iletişim kurulur
-                // Şimdilik simülasyon yapıyoruz
-                resolve(0);
-            });
-        }
-
-        // Video player'a komut gönder
-        function sendToVideoPlayer(command) {
-            // iframe içindeki video player'a postMessage gönder
-            try {
-                streamFrame.contentWindow.postMessage({
-                    type: 'syncstream-command',
-                    ...command
-                }, '*');
-            } catch (e) {
-                console.log('Video player iletişimi:', command);
-            }
-        }
-
-        // Zaman formatı (saniye -> MM:SS)
-        function formatTime(seconds) {
-            if (!seconds) return '00:00';
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        // Periyodik olarak aktif kullanıcıları güncelle
-        setInterval(() => {
-            if (roomCode && userName) {
-                db.collection('rooms').doc(roomCode).collection('activeUsers').doc(userName).update({
-                    lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            }
-        }, 30000); // Her 30 saniyede bir
-    </script>
-</body>
-</html>
+        const userName
