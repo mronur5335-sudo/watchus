@@ -1,298 +1,163 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>SyncStream · Oda</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W4TCH US · Oda</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            background: #0a0c12;
-            font-family: 'Segoe UI', Roboto, sans-serif;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            color: #ddd;
+        body { background: #0a0c12; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; color: #ddd; overflow: hidden; }
+        .header { background: #151b25; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3548; }
+        .v-container { flex: 1; background: #000; position: relative; }
+        video, iframe, #yt { width: 100%; height: 100%; border: none; }
+        
+        /* SENKRONİZE ET BUTONU (Kritik Parça) */
+        #syncOverlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); display: none; z-index: 100;
+            flex-direction: column; align-items: center; justify-content: center;
         }
-        /* üst bilgi */
-        .room-header {
-            background: #151b25;
-            padding: 12px 20px;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid #2d3548;
-            gap: 10px;
-        }
-        .room-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 600;
-        }
-        .room-code {
-            background: #2d3a57;
-            padding: 6px 16px;
-            border-radius: 40px;
-            font-family: monospace;
-            font-size: 1.2rem;
-            letter-spacing: 1px;
-            color: #c0d0ff;
-        }
-        .copy-btn {
-            background: #33415c;
-            border: none;
-            color: white;
-            padding: 6px 16px;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            cursor: pointer;
-        }
-        .copy-btn:active { background: #4a5a7a; }
-        .user-badge {
-            background: #2d4055;
-            padding: 8px 16px;
-            border-radius: 40px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        /* iframe alanı */
-        .video-wrapper {
-            flex: 1 1 60vh;
-            background: #000;
-            position: relative;
-            min-height: 250px;
-        }
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-        /* sohbet bölümü */
-        .chat-section {
-            flex: 1 1 auto;
-            background: #121722;
-            display: flex;
-            flex-direction: column;
-            border-top: 1px solid #283040;
-            max-height: 40vh;
-        }
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px 16px 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .message {
-            background: #1f283b;
-            padding: 10px 14px;
-            border-radius: 20px;
-            max-width: 85%;
-            align-self: flex-start;
-            word-wrap: break-word;
-            line-height: 1.4;
-        }
-        .message.own {
-            background: #2b4b7a;
-            align-self: flex-end;
-        }
-        .msg-sender {
-            font-weight: 600;
-            font-size: 0.8rem;
-            color: #aec3f0;
-            margin-bottom: 4px;
-        }
-        .msg-text {
-            font-size: 0.95rem;
-        }
-        .chat-input-area {
-            display: flex;
-            gap: 8px;
-            padding: 12px 16px 16px;
-            background: #0f1621;
-            border-top: 1px solid #263040;
-        }
-        .chat-input-area input {
-            flex: 1;
-            background: #1e2638;
-            border: none;
-            border-radius: 30px;
-            padding: 14px 18px;
-            color: white;
-            font-size: 1rem;
-            outline: none;
-        }
-        .chat-input-area button {
-            background: #4f6cdb;
-            border: none;
-            border-radius: 30px;
-            width: 55px;
-            color: white;
-            font-size: 1.5rem;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .chat-input-area button:active { background: #3b56b5; }
+        .sync-btn { background: #ff4757; color: white; padding: 15px 30px; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.2rem; border: none; }
 
-        /* mobil düzen */
-        @media (max-width: 600px) {
-            .room-header { flex-direction: column; align-items: start; }
-            .video-wrapper { flex: 1 1 50vh; }
-            .chat-section { max-height: 45vh; }
-        }
+        .chat { flex: 0 0 30%; background: #121722; display: flex; flex-direction: column; border-top: 1px solid #283040; }
+        .messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 5px; }
+        .msg { background: #1f283b; padding: 8px; border-radius: 10px; font-size: 0.9rem; max-width: 80%; }
+        .msg.own { align-self: flex-end; background: #2b4b7a; }
+        .input-box { padding: 10px; display: flex; gap: 5px; }
+        input { flex: 1; background: #1e2638; border: none; padding: 10px; border-radius: 10px; color: #fff; outline: none; }
     </style>
 </head>
 <body>
-    <div class="room-header">
-        <div class="room-title">
-            <span>🎬 SyncStream</span>
-            <span class="room-code" id="roomCodeDisplay"></span>
-        </div>
-        <div style="display: flex; gap: 8px;">
-            <button class="copy-btn" id="copyInviteBtn">📋 Davet Linkini Kopyala</button>
-            <span class="user-badge" id="userNameDisplay">👤 yükleniyor...</span>
+    <div id="syncOverlay">
+        <button class="sync-btn" id="syncAction">ADMİN BAŞLATTI - SENKRONİZE OL</button>
+    </div>
+
+    <div class="header">
+        <div>🎬 <b>W4TCH US</b> <span id="cDisp" style="color:#a0b4ff; font-family:monospace; margin-left:10px"></span></div>
+        <div id="uDisp">...</div>
+    </div>
+
+    <div class="v-container">
+        <div id="yt" style="display:none"></div>
+        <iframe id="ifr" style="display:none"></iframe>
+        <video id="vid" style="display:none" playsinline></video>
+    </div>
+
+    <div class="chat">
+        <div class="messages" id="msgs"></div>
+        <div class="input-box">
+            <input type="text" id="mInp" placeholder="Mesaj yazın...">
+            <button id="mBtn" style="background:#4f6cdb; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer">Gönder</button>
         </div>
     </div>
 
-    <div class="video-wrapper">
-        <iframe id="streamFrame" sandbox="allow-same-origin allow-scripts allow-popups allow-forms" allowfullscreen></iframe>
-    </div>
-
-    <div class="chat-section">
-        <div class="chat-messages" id="chatMessages"></div>
-        <div class="chat-input-area">
-            <input type="text" id="chatInput" placeholder="Mesajınız..." maxlength="200">
-            <button id="sendBtn">➤</button>
-        </div>
-    </div>
-
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script>
-        // ===== SENİN FIREBASE KONFİGÜRASYONUN =====
-        const firebaseConfig = {
-            apiKey: "AIzaSyDtl18Hp2i2P_r6Xry_5xuBkp7gaysrlTY",
-            authDomain: "film-7ac05.firebaseapp.com",
-            projectId: "film-7ac05",
-            storageBucket: "film-7ac05.firebasestorage.app",
-            messagingSenderId: "650477853428",
-            appId: "1:650477853428:web:49a179ee55a32dbdb21ca1",
-            measurementId: "G-SBC91W9CDC"
-        };
-        // =========================================
-
+        const firebaseConfig = { apiKey: "AIzaSyDtl18Hp2i2P_r6Xry_5xuBkp7gaysrlTY", authDomain: "film-7ac05.firebaseapp.com", projectId: "film-7ac05", storageBucket: "film-7ac05.firebasestorage.app", messagingSenderId: "650477853428", appId: "1:650477853428:web:49a179ee55a32dbdb21ca1" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // URL'den oda kodu ve kullanıcı adını al
-        const urlParams = new URLSearchParams(window.location.search);
-        const roomCode = urlParams.get('room');
-        const userName = urlParams.get('name') || 'İsimsiz';
+        const params = new URLSearchParams(window.location.search);
+        const roomCode = params.get('room'), userName = params.get('name');
+        let isAdmin = false, ytPlayer, lastStatus = 0;
 
-        if (!roomCode) {
-            alert('Oda kodu eksik! Ana sayfaya yönlendiriliyorsunuz.');
-            window.location.href = 'index.html';
-        }
+        document.getElementById('cDisp').textContent = roomCode;
 
-        // DOM
-        const roomCodeSpan = document.getElementById('roomCodeDisplay');
-        const userNameSpan = document.getElementById('userNameDisplay');
-        const streamFrame = document.getElementById('streamFrame');
-        const chatMessagesDiv = document.getElementById('chatMessages');
-        const chatInput = document.getElementById('chatInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const copyBtn = document.getElementById('copyInviteBtn');
-
-        roomCodeSpan.textContent = roomCode;
-        userNameSpan.textContent = `👤 ${userName}`;
-
-        // Oda bilgisini Firestore'dan al ve iframe'i yükle
         db.collection('rooms').doc(roomCode).get().then(doc => {
-            if (doc.exists) {
-                const url = doc.data().url;
-                streamFrame.src = url;
+            const d = doc.data();
+            isAdmin = (d.admin === userName);
+            document.getElementById('uDisp').textContent = (isAdmin ? "👑 " : "👤 ") + userName;
+
+            if(d.type === 'youtube' || d.url.includes('youtu')) {
+                document.getElementById('yt').style.display = 'block';
+                loadYT(d.url);
+            } else if(d.url.match(/\.(mp4|webm|ogg)$/i)) {
+                const v = document.getElementById('vid');
+                v.style.display = 'block'; v.src = d.url; v.controls = isAdmin;
+                setupVid(v);
             } else {
-                alert('Oda bulunamadı!');
-                window.location.href = 'index.html';
+                document.getElementById('ifr').style.display = 'block';
+                document.getElementById('ifr').src = d.url;
             }
-        }).catch(err => {
-            console.error('Oda yüklenemedi', err);
         });
 
-        // GERÇEK ZAMANLI SOHBET
-        const messagesRef = db.collection('rooms').doc(roomCode).collection('messages').orderBy('timestamp');
+        // --- ADMIN KONTROLLERİ ---
+        function setupVid(v) {
+            if(isAdmin) {
+                v.onplay = () => db.collection('rooms').doc(roomCode).update({ status: 1, time: v.currentTime });
+                v.onpause = () => db.collection('rooms').doc(roomCode).update({ status: 0, time: v.currentTime });
+                setInterval(() => { if(!v.paused) db.collection('rooms').doc(roomCode).update({ time: v.currentTime }); }, 3000);
+            }
+        }
 
-        // Yeni mesaj geldikçe listeyi güncelle
-        messagesRef.onSnapshot(snapshot => {
-            snapshot.docChanges().forEach(change => {
-                if (change.type === 'added') {
-                    const msg = change.doc.data();
-                    displayMessage(msg, change.doc.id);
-                }
-            });
-            // Otomatik kaydır (en alta)
-            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
-        });
-
-        // Mesaj gönderme
-        async function sendMessage() {
-            const text = chatInput.value.trim();
-            if (!text) return;
-            chatInput.value = '';
-
-            try {
-                await db.collection('rooms').doc(roomCode).collection('messages').add({
-                    sender: userName,
-                    text: text,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        function loadYT(url) {
+            const t = document.createElement('script'); t.src = "https://www.youtube.com/iframe_api";
+            document.head.appendChild(t);
+            window.onYouTubeIframeAPIReady = () => {
+                const id = url.includes('v=') ? url.split('v=')[1].split('&')[0] : url.split('/').pop();
+                ytPlayer = new YT.Player('yt', {
+                    videoId: id, playerVars: { controls: isAdmin ? 1 : 0 },
+                    events: { onStateChange: (e) => {
+                        if(isAdmin) {
+                            let s = (e.data == 1) ? 1 : 0;
+                            db.collection('rooms').doc(roomCode).update({ status: s, time: ytPlayer.getCurrentTime() });
+                        }
+                    }}
                 });
-            } catch (err) {
-                console.error('Mesaj gönderilemedi', err);
-                alert('Mesaj gönderilemedi. Tekrar dene.');
-            }
+            };
         }
 
-        sendBtn.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
+        // --- SENKRONİZASYON DİNLEYİCİ (1/0 MANTIĞI) ---
+        db.collection('rooms').doc(roomCode).onSnapshot(doc => {
+            const d = doc.data();
+            if(!isAdmin && d) {
+                // Admin videoyu başlattıysa ve bizde duruyorsa butonu göster
+                if(d.status == 1 && lastStatus == 0) {
+                    document.getElementById('syncOverlay').style.display = 'flex';
+                }
+                if(d.status == 0) {
+                    const v = document.getElementById('vid');
+                    if(v.src) v.pause();
+                    if(ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
+                    document.getElementById('syncOverlay').style.display = 'none';
+                }
+                lastStatus = d.status;
+            }
         });
 
-        // Mesajı ekrana bas (yerel)
-        function displayMessage(msg, docId) {
-            const msgDiv = document.createElement('div');
-            msgDiv.classList.add('message');
-            // Gönderen kişi ben miyim?
-            if (msg.sender === userName) {
-                msgDiv.classList.add('own');
-            }
-            msgDiv.innerHTML = `<div class="msg-sender">${escapeHtml(msg.sender)}</div>
-                                <div class="msg-text">${escapeHtml(msg.text)}</div>`;
-            chatMessagesDiv.appendChild(msgDiv);
-        }
-
-        // Basit XSS koruması
-        function escapeHtml(unsafe) {
-            return unsafe.replace(/[&<>"]/g, function(m) {
-                if(m === '&') return '&amp;'; if(m === '<') return '&lt;';
-                if(m === '>') return '&gt;'; if(m === '"') return '&quot;';
-                return m;
+        // SENKRONİZE OL BUTONUNA TIKLANINCA
+        document.getElementById('syncAction').onclick = () => {
+            db.collection('rooms').doc(roomCode).get().then(doc => {
+                const d = doc.data();
+                const v = document.getElementById('vid');
+                if(v.src) {
+                    v.currentTime = d.time;
+                    v.play();
+                }
+                if(ytPlayer && ytPlayer.playVideo) {
+                    ytPlayer.seekTo(d.time);
+                    ytPlayer.playVideo();
+                }
+                document.getElementById('syncOverlay').style.display = 'none';
             });
-        }
+        };
 
-        // Davet linki kopyala
-        copyBtn.addEventListener('click', () => {
-            const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
-            navigator.clipboard.writeText(inviteUrl).then(() => {
-                copyBtn.textContent = '✅ Kopyalandı!';
-                setTimeout(() => { copyBtn.textContent = '📋 Davet Linkini Kopyala'; }, 2000);
-            }).catch(() => {
-                prompt('Linki manuel kopyala:', inviteUrl);
-            });
+        // --- SOHBET ---
+        const mBox = document.getElementById('msgs'), mInp = document.getElementById('mInp');
+        document.getElementById('mBtn').onclick = () => {
+            if(!mInp.value) return;
+            db.collection('rooms').doc(roomCode).collection('messages').add({ s: userName, t: mInp.value, ts: firebase.firestore.FieldValue.serverTimestamp() });
+            mInp.value = "";
+        };
+        db.collection('rooms').doc(roomCode).collection('messages').orderBy('ts').onSnapshot(q => {
+            q.docChanges().forEach(c => { if(c.type === 'added') {
+                const m = c.doc.data();
+                const div = document.createElement('div');
+                div.className = `msg ${m.s === userName ? 'own' : ''}`;
+                div.innerHTML = `<b>${m.s}:</b> ${m.t}`;
+                mBox.appendChild(div); mBox.scrollTop = mBox.scrollHeight;
+            }});
         });
     </script>
 </body>
