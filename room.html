@@ -188,10 +188,6 @@
             background: transparent;
             z-index: 50;
             cursor: not-allowed;
-            display: none; /* Başlangıçta gizli */
-        }
-        .iframe-lock.active {
-            display: block;
         }
         .iframe-lock::after {
             content: '🔒 Host Kontrolünde';
@@ -209,7 +205,7 @@
             transition: opacity 0.3s;
             pointer-events: none;
         }
-        .iframe-lock.active:hover::after {
+        .iframe-lock:hover::after {
             opacity: 1;
         }
         
@@ -606,7 +602,7 @@
         <button class="control-btn" id="pauseBtn">⏸️ Durdur</button>
         <button class="control-btn" id="syncBtn">🔄 Senkronize</button>
         <div class="time-display" id="timeDisplay">00:00 / 00:00</div>
-        <span class="sync-status online" id="syncStatus">Bekleniyor...</span>
+        <span class="sync-status online" id="syncStatus">Senkronize</span>
     </div>
 
     <!-- Video Alanı -->
@@ -663,9 +659,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
     <script>
-        // ==========================================
-        // FIREBASE KONFİGÜRASYONU
-        // ==========================================
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyDtl18Hp2i2P_r6Xry_5xuBkp7gaysrlTY",
             authDomain: "film-7ac05.firebaseapp.com",
@@ -676,4 +670,10 @@
             measurementId: "G-SBC91W9CDC"
         };
 
-        firebas
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // URL Parametreleri
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomCode = urlParams.get('room');
+        const userName
