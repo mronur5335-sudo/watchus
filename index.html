@@ -51,11 +51,12 @@
 
         document.getElementById('bCreate').onclick = async () => {
             const name = document.getElementById('cName').value, url = document.getElementById('cUrl').value, type = document.getElementById('vType').value;
+            if(!name || !url) return alert("Eksik bilgi!");
             const code = Math.random().toString(36).substring(2,8).toUpperCase();
             await db.collection('rooms').doc(code).set({ url, type, admin: name, status: 0, time: 0 });
             window.location.href = `room.html?room=${code}&name=${encodeURIComponent(name)}`;
         };
-        document.getElementById('bJoin').onclick = async () => {
+        document.getElementById('bJoin').onclick = () => {
             const code = document.getElementById('jCode').value.toUpperCase(), name = document.getElementById('jName').value;
             window.location.href = `room.html?room=${code}&name=${encodeURIComponent(name)}`;
         };
