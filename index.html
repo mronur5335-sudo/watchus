@@ -8,12 +8,13 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #0b0e14; font-family: 'Segoe UI', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
         .container { background: #1a1f2b; width: 100%; max-width: 450px; border-radius: 25px; padding: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); color: #fff; text-align: center; }
-        h1 { margin-bottom: 20px; color: #a0b4ff; }
-        input, select { width: 100%; background: #0f131c; border: 1px solid #2e3648; border-radius: 12px; padding: 12px; color: #fff; margin-bottom: 15px; outline: none; }
-        .btn { background: #4f6cdb; color: white; border: none; width: 100%; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: bold; }
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab { flex: 1; padding: 10px; background: #252c3b; border-radius: 10px; cursor: pointer; }
-        .tab.active { background: #3d4a6b; }
+        h1 { margin-bottom: 20px; color: #a0b4ff; font-size: 2.5rem; }
+        input, select { width: 100%; background: #0f131c; border: 1px solid #2e3648; border-radius: 12px; padding: 14px; color: #fff; margin-bottom: 15px; outline: none; font-size: 1rem; }
+        .btn { background: #4f6cdb; color: white; border: none; width: 100%; padding: 15px; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 1.1rem; transition: 0.3s; }
+        .btn:hover { background: #3d58b5; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 25px; background: #0f131c; padding: 5px; border-radius: 15px; }
+        .tab { flex: 1; padding: 10px; border-radius: 10px; cursor: pointer; transition: 0.2s; color: #a7b3d0; }
+        .tab.active { background: #252c3b; color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .hidden { display: none; }
     </style>
 </head>
@@ -24,21 +25,24 @@
             <div class="tab active" id="tCreate">Oda Kur</div>
             <div class="tab" id="tJoin">Katıl</div>
         </div>
+        
         <div id="fCreate">
             <input type="text" id="cName" placeholder="Adınız">
             <select id="vType">
                 <option value="youtube">YouTube</option>
-                <option value="google">Direkt Video / Web Sitesi</option>
+                <option value="google">Web Sitesi / Direkt Video</option>
             </select>
-            <input type="url" id="cUrl" placeholder="Link Yapıştırın">
-            <button class="btn" id="bCreate">Odayı Başlat</button>
+            <input type="url" id="cUrl" placeholder="Video veya Site Linki">
+            <button class="btn" id="bCreate">Odayı Oluştur</button>
         </div>
+
         <div id="fJoin" class="hidden">
-            <input type="text" id="jCode" placeholder="Oda Kodu">
+            <input type="text" id="jCode" placeholder="Oda Kodu (Örn: ABC123)">
             <input type="text" id="jName" placeholder="Adınız">
-            <button class="btn" id="bJoin">Katıl</button>
+            <button class="btn" id="bJoin">Odaya Giriş Yap</button>
         </div>
     </div>
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script>
@@ -46,18 +50,22 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        document.getElementById('tCreate').onclick = () => { document.getElementById('fCreate').classList.remove('hidden'); document.getElementById('fJoin').classList.add('hidden'); document.getElementById('tCreate').classList.add('active'); document.getElementById('tJoin').classList.remove('active'); };
-        document.getElementById('tJoin').onclick = () => { document.getElementById('fJoin').classList.remove('hidden'); document.getElementById('fCreate').classList.add('hidden'); document.getElementById('tJoin').classList.add('active'); document.getElementById('tCreate').classList.remove('active'); };
+        const tCreate = document.getElementById('tCreate'), tJoin = document.getElementById('tJoin'), fCreate = document.getElementById('fCreate'), fJoin = document.getElementById('fJoin');
+        
+        tCreate.onclick = () => { fCreate.classList.remove('hidden'); fJoin.classList.add('hidden'); tCreate.classList.add('active'); tJoin.classList.remove('active'); };
+        tJoin.onclick = () => { fJoin.classList.remove('hidden'); fCreate.classList.add('hidden'); tJoin.classList.add('active'); tCreate.classList.remove('active'); };
 
         document.getElementById('bCreate').onclick = async () => {
             const name = document.getElementById('cName').value, url = document.getElementById('cUrl').value, type = document.getElementById('vType').value;
-            if(!name || !url) return alert("Eksik bilgi!");
+            if(!name || !url) return alert("Lütfen tüm alanları doldurun!");
             const code = Math.random().toString(36).substring(2,8).toUpperCase();
             await db.collection('rooms').doc(code).set({ url, type, admin: name, status: 0, time: 0 });
             window.location.href = `room.html?room=${code}&name=${encodeURIComponent(name)}`;
         };
+
         document.getElementById('bJoin').onclick = () => {
             const code = document.getElementById('jCode').value.toUpperCase(), name = document.getElementById('jName').value;
+            if(!code || !name) return alert("Bilgileri girin!");
             window.location.href = `room.html?room=${code}&name=${encodeURIComponent(name)}`;
         };
     </script>
