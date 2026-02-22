@@ -7,33 +7,30 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #0a0c12; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; color: #ddd; overflow: hidden; }
-        .header { background: #151b25; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3548; }
-        .v-container { flex: 1; background: #000; position: relative; min-height: 300px; }
-        #yt, #ifr, #vid { width: 100%; height: 100%; position: absolute; top: 0; left: 0; border: none; }
+        .header { background: #151b25; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3548; }
+        .v-container { flex: 1; background: #000; position: relative; display: flex; align-items: center; justify-content: center; }
+        #yt, #ifr, #vid { width: 100%; height: 100%; border: none; position: absolute; }
         
-        /* Senkronize Et Butonu */
-        #syncOverlay { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.85); display: none; z-index: 999; 
-            flex-direction: column; align-items: center; justify-content: center; 
-        }
-        .sync-btn { background: #ff4757; color: white; padding: 20px 40px; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.4rem; border: none; box-shadow: 0 0 30px rgba(255,71,87,0.4); }
+        /* Senkronizasyon Katmanı */
+        #syncOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 99; flex-direction: column; align-items: center; justify-content: center; }
+        .sync-btn { background: #ff4757; color: white; padding: 18px 35px; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.3rem; border: none; box-shadow: 0 0 25px rgba(255,71,87,0.4); }
 
         .chat { flex: 0 0 35%; background: #121722; display: flex; flex-direction: column; border-top: 1px solid #283040; }
-        .messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-        .msg { background: #1f283b; padding: 10px; border-radius: 12px; font-size: 0.95rem; max-width: 85%; }
-        .msg.own { align-self: flex-end; background: #2b4b7a; }
-        .input-box { padding: 15px; display: flex; gap: 10px; background: #0f131c; }
-        input { flex: 1; background: #1e2638; border: none; padding: 12px; border-radius: 10px; color: #fff; outline: none; }
+        .messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { background: #1f283b; padding: 10px; border-radius: 12px; font-size: 0.95rem; max-width: 85%; line-height: 1.4; }
+        .msg.own { align-self: flex-end; background: #2b4b7a; border-bottom-right-radius: 2px; }
+        .input-box { padding: 15px; display: flex; gap: 10px; background: #0f131c; border-top: 1px solid #222; }
+        input#mInp { flex: 1; background: #1e2638; border: none; padding: 14px; border-radius: 12px; color: #fff; outline: none; }
+        button#mBtn { background: #4f6cdb; color: white; border: none; padding: 0 25px; border-radius: 12px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
     <div id="syncOverlay">
-        <button class="sync-btn" id="syncAction">▶ VİDEOYU BAŞLAT VE EŞİTLE</button>
+        <button class="sync-btn" id="syncAction">VİDEOYU BAŞLAT VE EŞİTLE</button>
     </div>
 
     <div class="header">
-        <div>🎬 <b>W4TCH US</b> <span id="cDisp" style="color:#a0b4ff; margin-left:10px; font-weight:bold;"></span></div>
+        <div>🎬 <b>W4TCH US</b> <span id="cDisp" style="color:#a0b4ff; margin-left:10px; font-weight:bold; font-family: monospace;"></span></div>
         <div id="uDisp">...</div>
     </div>
 
@@ -46,8 +43,8 @@
     <div class="chat">
         <div class="messages" id="msgs"></div>
         <div class="input-box">
-            <input type="text" id="mInp" placeholder="Mesaj yazın...">
-            <button id="mBtn" style="background:#4f6cdb; color:white; border:none; padding:10px 25px; border-radius:10px; cursor:pointer; font-weight:bold;">Gönder</button>
+            <input type="text" id="mInp" placeholder="Bir mesaj yazın...">
+            <button id="mBtn">Gönder</button>
         </div>
     </div>
 
@@ -59,7 +56,7 @@
         const db = firebase.firestore();
 
         const params = new URLSearchParams(window.location.search);
-        const roomCode = params.get('room'), userName = params.get('name');
+        const roomCode = params.get('room'), userName = params.get('name') || "İsimsiz";
         let isAdmin = false, ytPlayer, lastStatus = 0;
 
         document.getElementById('cDisp').textContent = roomCode;
@@ -70,7 +67,6 @@
             isAdmin = (d.admin === userName);
             document.getElementById('uDisp').textContent = (isAdmin ? "👑 " : "👤 ") + userName;
 
-            // URL TİPİNE GÖRE OYNATICI SEÇİMİ
             if (d.url.includes("youtube.com") || d.url.includes("youtu.be")) {
                 loadYT(d.url);
             } else if (d.url.match(/\.(mp4|webm|ogg)$/i)) {
@@ -79,19 +75,15 @@
                 setupVid(v);
             } else {
                 const ifr = document.getElementById('ifr');
-                ifr.style.display = 'block';
-                ifr.src = d.url;
+                ifr.style.display = 'block'; ifr.src = d.url;
             }
         });
 
-        // --- YOUTUBE SİSTEMİ (GELİŞTİRİLMİŞ) ---
+        // YouTube ID Ayıklama ve Yükleme
         function loadYT(url) {
-            // Video ID Ayıklama (Regex)
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
             const match = url.match(regExp);
             const vId = (match && match[2].length == 11) ? match[2] : null;
-
-            if(!vId) return alert("Geçersiz YouTube linki!");
 
             const tag = document.createElement('script');
             tag.src = "https://www.youtube.com/iframe_api";
@@ -100,12 +92,7 @@
             window.onYouTubeIframeAPIReady = () => {
                 ytPlayer = new YT.Player('yt', {
                     videoId: vId,
-                    playerVars: { 
-                        'autoplay': 0, 
-                        'controls': isAdmin ? 1 : 0, 
-                        'rel': 0,
-                        'origin': window.location.origin 
-                    },
+                    playerVars: { 'autoplay': 0, 'controls': isAdmin ? 1 : 0, 'rel': 0, 'origin': window.location.origin },
                     events: {
                         'onStateChange': (e) => {
                             if(isAdmin) {
@@ -122,19 +109,15 @@
             if(isAdmin) {
                 v.onplay = () => db.collection('rooms').doc(roomCode).update({ status: 1, time: v.currentTime });
                 v.onpause = () => db.collection('rooms').doc(roomCode).update({ status: 0, time: v.currentTime });
-                setInterval(() => { if(!v.paused) db.collection('rooms').doc(roomCode).update({ time: v.currentTime }); }, 4000);
+                setInterval(() => { if(!v.paused) db.collection('rooms').doc(roomCode).update({ time: v.currentTime }); }, 3000);
             }
         }
 
-        // --- SENKRONİZASYON TAKİBİ ---
+        // Senkronizasyon Takibi
         db.collection('rooms').doc(roomCode).onSnapshot(doc => {
             const d = doc.data();
             if(!isAdmin && d) {
-                // Admin başlattıysa butonu göster (Autoplay engelini aşmak için)
-                if(d.status == 1 && lastStatus == 0) {
-                    document.getElementById('syncOverlay').style.display = 'flex';
-                }
-                // Admin durdurduysa bizde de dursun
+                if(d.status == 1 && lastStatus == 0) document.getElementById('syncOverlay').style.display = 'flex';
                 if(d.status == 0) {
                     const v = document.getElementById('vid');
                     if(v.src) v.pause();
@@ -145,7 +128,6 @@
             }
         });
 
-        // Senkronize Et Butonuna Tıklama
         document.getElementById('syncAction').onclick = () => {
             db.collection('rooms').doc(roomCode).get().then(doc => {
                 const d = doc.data();
@@ -156,18 +138,19 @@
             });
         };
 
-        // --- CHAT SİSTEMİ ---
-        const mBox = document.getElementById('msgs'), mInp = document.getElementById('mInp');
-        document.getElementById('mBtn').onclick = sendMessage;
-        mInp.onkeypress = (e) => e.key === 'Enter' && sendMessage();
-
-        function sendMessage() {
+        // --- SOHBET SİSTEMİ (Herkes Yazabilir) ---
+        const mBox = document.getElementById('msgs'), mInp = document.getElementById('mInp'), mBtn = document.getElementById('mBtn');
+        
+        const sendMsg = () => {
             if(!mInp.value.trim()) return;
             db.collection('rooms').doc(roomCode).collection('messages').add({ 
                 s: userName, t: mInp.value, ts: firebase.firestore.FieldValue.serverTimestamp() 
             });
             mInp.value = "";
-        }
+        };
+
+        mBtn.onclick = sendMsg;
+        mInp.onkeypress = (e) => e.key === 'Enter' && sendMsg();
 
         db.collection('rooms').doc(roomCode).collection('messages').orderBy('ts').onSnapshot(q => {
             q.docChanges().forEach(c => { if(c.type === 'added') {
