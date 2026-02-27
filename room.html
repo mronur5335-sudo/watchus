@@ -307,6 +307,59 @@
         }
 
         .chat-input button:hover { transform: scale(1.08); }
+
+        /* ─── Fullscreen Button ───────────────────────────── */
+        #fsBtn {
+            position: fixed;
+            bottom: 28px;
+            right: 94px;
+            width: 54px;
+            height: 54px;
+            background: rgba(8,10,14,0.82);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            font-size: 20px;
+            transition: all 0.25s;
+            backdrop-filter: blur(12px);
+        }
+
+        #fsBtn:hover {
+            background: rgba(245,158,11,0.15);
+            border-color: rgba(245,158,11,0.4);
+            transform: scale(1.08);
+        }
+
+        /* ─── Responsive / Flexible container ────────────── */
+        body {
+            overflow: auto;
+        }
+
+        .v-container {
+            width: 100vw;
+            height: 100vh;
+            min-height: 300px;
+            position: relative;
+            background: #000;
+        }
+
+        /* When not fullscreen, allow shrinking on small screens */
+        @media (max-width: 600px) {
+            .v-container { height: 56vw; min-height: 220px; }
+            body { overflow: hidden; }
+            .top-bar { top: 10px; left: 10px; gap: 5px; }
+            .badge { padding: 5px 10px; font-size: 0.75rem; }
+            #adminPanel { top: 10px; right: 10px; }
+            #adminPanel input { width: 140px; }
+            .chat-window { width: calc(100vw - 24px); right: 12px; bottom: 88px; }
+            #chatToggle, #fsBtn { width: 46px; height: 46px; bottom: 16px; }
+            #chatToggle { right: 16px; }
+            #fsBtn { right: 72px; }
+        }
     </style>
 </head>
 <body>
@@ -334,6 +387,7 @@
         <iframe id="ifr" style="display:none" sandbox="allow-forms allow-scripts allow-same-origin" allowfullscreen></iframe>
     </div>
 
+    <div id="fsBtn" title="Tam Ekran">⛶</div>
     <div id="chatToggle">💬</div>
 
     <div class="chat-window" id="chatWin">
@@ -397,6 +451,21 @@
             const url = document.getElementById('newUrl').value;
             if(url) db.collection('rooms').doc(roomCode).update({ url: url, status: 0, time: 0 });
         }
+
+        // ─── Fullscreen ───────────────────────────────────
+        const fsBtn = document.getElementById('fsBtn');
+        fsBtn.onclick = () => {
+            const el = document.documentElement;
+            if (!document.fullscreenElement) {
+                (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen).call(el);
+            } else {
+                (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen).call(document);
+            }
+        };
+        document.addEventListener('fullscreenchange', () => {
+            fsBtn.textContent = document.fullscreenElement ? '✕' : '⛶';
+            fsBtn.title = document.fullscreenElement ? 'Tam Ekrandan Çık' : 'Tam Ekran';
+        });
 
         const chatToggle = document.getElementById('chatToggle'), chatWin = document.getElementById('chatWin');
         chatToggle.onclick = () => {
