@@ -4,47 +4,344 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>W4TCH US · Oda</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0a0c12; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; color: #ddd; overflow: hidden; }
-        .header { background: #151b25; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d3548; }
-        .v-container { flex: 1; background: #000; position: relative; display: flex; align-items: center; justify-content: center; }
-        #yt, #ifr, #vid { width: 100%; height: 100%; border: none; position: absolute; }
-        
-        /* Senkronizasyon Katmanı */
-        #syncOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 99; flex-direction: column; align-items: center; justify-content: center; }
-        .sync-btn { background: #ff4757; color: white; padding: 18px 35px; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.3rem; border: none; box-shadow: 0 0 25px rgba(255,71,87,0.4); }
+        :root {
+            --amber: #f59e0b;
+            --indigo: #6366f1;
+            --bg: #080a0e;
+            --surface: rgba(255,255,255,0.04);
+            --border: rgba(255,255,255,0.08);
+            --text: #e2e8f0;
+            --muted: #64748b;
+        }
 
-        .chat { flex: 0 0 35%; background: #121722; display: flex; flex-direction: column; border-top: 1px solid #283040; }
-        .messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .msg { background: #1f283b; padding: 10px; border-radius: 12px; font-size: 0.95rem; max-width: 85%; line-height: 1.4; }
-        .msg.own { align-self: flex-end; background: #2b4b7a; border-bottom-right-radius: 2px; }
-        .input-box { padding: 15px; display: flex; gap: 10px; background: #0f131c; border-top: 1px solid #222; }
-        input#mInp { flex: 1; background: #1e2638; border: none; padding: 14px; border-radius: 12px; color: #fff; outline: none; }
-        button#mBtn { background: #4f6cdb; color: white; border: none; padding: 0 25px; border-radius: 12px; cursor: pointer; font-weight: bold; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #000;
+            font-family: 'DM Sans', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            color: var(--text);
+        }
+
+        .v-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background: #000;
+        }
+
+        #yt, #ifr, #vid { width: 100%; height: 100%; border: none; }
+
+        /* ─── Top HUD ─────────────────────────────────────── */
+        .top-bar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 20;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .badge {
+            background: rgba(8,10,14,0.75);
+            backdrop-filter: blur(16px);
+            padding: 7px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.82rem;
+            font-weight: 400;
+            color: rgba(255,255,255,0.7);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge b {
+            color: var(--amber);
+            font-weight: 600;
+            letter-spacing: 1px;
+            font-family: 'Bebas Neue', cursive;
+            font-size: 1rem;
+        }
+
+        .badge-icon {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 6px #22c55e;
+            animation: pulse-dot 2s ease infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* ─── Admin Panel ─────────────────────────────────── */
+        #adminPanel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 20;
+            display: none;
+            gap: 8px;
+            align-items: center;
+        }
+
+        #adminPanel input {
+            background: rgba(8,10,14,0.8);
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 8px 14px;
+            border-radius: 10px;
+            color: white;
+            width: 220px;
+            outline: none;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            backdrop-filter: blur(16px);
+            transition: border-color 0.2s;
+        }
+
+        #adminPanel input:focus { border-color: rgba(245,158,11,0.5); }
+
+        #adminPanel button {
+            background: var(--amber);
+            border: none;
+            padding: 8px 14px;
+            border-radius: 10px;
+            color: #0a0a0a;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        #adminPanel button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 16px rgba(245,158,11,0.3);
+        }
+
+        /* ─── Iframe Error ────────────────────────────────── */
+        #iframeError {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.3);
+            border-left: 3px solid #ef4444;
+            padding: 24px 32px;
+            border-radius: 16px;
+            text-align: center;
+            display: none;
+            z-index: 5;
+            max-width: 420px;
+            backdrop-filter: blur(10px);
+        }
+
+        #iframeError h3 { font-size: 1rem; color: #fca5a5; margin-bottom: 8px; }
+        #iframeError p { font-size: 0.85rem; color: rgba(252,165,165,0.7); line-height: 1.5; }
+
+        /* ─── Chat Toggle Button ──────────────────────────── */
+        #chatToggle {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            width: 54px;
+            height: 54px;
+            background: var(--amber);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 8px 28px rgba(245,158,11,0.35);
+            z-index: 100;
+            font-size: 22px;
+            transition: all 0.25s;
+        }
+
+        #chatToggle:hover {
+            transform: scale(1.08);
+            box-shadow: 0 12px 36px rgba(245,158,11,0.45);
+        }
+
+        #chatToggle.open {
+            background: rgba(8,10,14,0.9);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+        }
+
+        /* ─── Chat Window ─────────────────────────────────── */
+        .chat-window {
+            position: fixed;
+            bottom: 94px;
+            right: 28px;
+            width: 310px;
+            height: 440px;
+            background: rgba(8,10,14,0.92);
+            backdrop-filter: blur(24px);
+            border-radius: 18px;
+            display: none;
+            flex-direction: column;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
+            z-index: 99;
+            overflow: hidden;
+            transform-origin: bottom right;
+            animation: chatIn 0.2s ease both;
+        }
+
+        @keyframes chatIn {
+            from { opacity: 0; transform: scale(0.92); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .chat-window.active { display: flex; }
+
+        .chat-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            font-size: 0.78rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--muted);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-header::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 6px #22c55e;
+        }
+
+        .msgs {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.1) transparent;
+        }
+
+        .msgs::-webkit-scrollbar { width: 4px; }
+        .msgs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+        .msg {
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 0.84rem;
+            max-width: 85%;
+            word-wrap: break-word;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.06);
+            line-height: 1.4;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .msg b {
+            color: var(--amber);
+            font-size: 0.75rem;
+            display: block;
+            margin-bottom: 2px;
+            font-weight: 600;
+        }
+
+        .msg.own {
+            align-self: flex-end;
+            background: rgba(245,158,11,0.15);
+            border-color: rgba(245,158,11,0.2);
+        }
+
+        .msg.own b { color: #fcd34d; }
+
+        .chat-input {
+            padding: 12px;
+            display: flex;
+            gap: 8px;
+            border-top: 1px solid rgba(255,255,255,0.07);
+        }
+
+        .chat-input input {
+            flex: 1;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 9px 13px;
+            border-radius: 10px;
+            color: white;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input input:focus { border-color: rgba(245,158,11,0.4); }
+        .chat-input input::placeholder { color: var(--muted); }
+
+        .chat-input button {
+            background: var(--amber);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            color: #0a0a0a;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .chat-input button:hover { transform: scale(1.08); }
     </style>
 </head>
 <body>
-    <div id="syncOverlay">
-        <button class="sync-btn" id="syncAction">VİDEOYU BAŞLAT VE EŞİTLE</button>
+    <div id="iframeError">
+        <h3>🚨 İçerik Yüklenemedi</h3>
+        <p>Bu site iframe bağlantısını engelliyor. Lütfen direkt video linki kullanın.</p>
     </div>
 
-    <div class="header">
-        <div>🎬 <b>W4TCH US</b> <span id="cDisp" style="color:#a0b4ff; margin-left:10px; font-weight:bold; font-family: monospace;"></span></div>
-        <div id="uDisp">...</div>
+    <div class="top-bar">
+        <div class="badge">
+            <div class="badge-icon"></div>
+            Oda&nbsp;<b id="cDisp"></b>
+        </div>
+        <div class="badge" id="uDisp">...</div>
+    </div>
+
+    <div id="adminPanel">
+        <input type="text" id="newUrl" placeholder="Yeni video linki...">
+        <button onclick="changeVideo()">🔄 Değiştir</button>
     </div>
 
     <div class="v-container">
         <div id="yt"></div>
-        <iframe id="ifr" style="display:none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
         <video id="vid" style="display:none" playsinline></video>
+        <iframe id="ifr" style="display:none" sandbox="allow-forms allow-scripts allow-same-origin" allowfullscreen></iframe>
     </div>
 
-    <div class="chat">
-        <div class="messages" id="msgs"></div>
-        <div class="input-box">
-            <input type="text" id="mInp" placeholder="Bir mesaj yazın...">
-            <button id="mBtn">Gönder</button>
+    <div id="chatToggle">💬</div>
+
+    <div class="chat-window" id="chatWin">
+        <div class="chat-header">Sohbet</div>
+        <div class="msgs" id="msgs"></div>
+        <div class="chat-input">
+            <input type="text" id="mInp" placeholder="Mesaj yaz...">
+            <button id="mBtn">➤</button>
         </div>
     </div>
 
@@ -56,111 +353,87 @@
         const db = firebase.firestore();
 
         const params = new URLSearchParams(window.location.search);
-        const roomCode = params.get('room'), userName = params.get('name') || "İsimsiz";
-        let isAdmin = false, ytPlayer, lastStatus = 0;
+        const roomCode = params.get('room'), userName = params.get('name') || "Anonim";
+        let isAdmin = false, ytPlayer, currentUrl = "";
 
         document.getElementById('cDisp').textContent = roomCode;
 
-        db.collection('rooms').doc(roomCode).get().then(doc => {
-            if(!doc.exists) return alert("Oda bulunamadı!");
-            const d = doc.data();
+        db.collection('rooms').doc(roomCode).onSnapshot(doc => {
+            const d = doc.data(); if(!d) return;
             isAdmin = (d.admin === userName);
             document.getElementById('uDisp').textContent = (isAdmin ? "👑 " : "👤 ") + userName;
+            if(isAdmin) document.getElementById('adminPanel').style.display = 'flex';
+            if (currentUrl !== d.url) { currentUrl = d.url; loadPlayer(d); }
+            if(!isAdmin) syncClient(d);
+        });
+
+        function loadPlayer(d) {
+            const v = document.getElementById('vid'), ytEl = document.getElementById('yt'), ifr = document.getElementById('ifr');
+            const err = document.getElementById('iframeError');
+            v.style.display = ytEl.style.display = ifr.style.display = err.style.display = 'none';
 
             if (d.url.includes("youtube.com") || d.url.includes("youtu.be")) {
-                loadYT(d.url);
-            } else if (d.url.match(/\.(mp4|webm|ogg)$/i)) {
-                const v = document.getElementById('vid');
-                v.style.display = 'block'; v.src = d.url; v.controls = isAdmin;
-                setupVid(v);
-            } else {
-                const ifr = document.getElementById('ifr');
-                ifr.style.display = 'block'; ifr.src = d.url;
-            }
-        });
-
-        // YouTube ID Ayıklama ve Yükleme
-        function loadYT(url) {
-            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-            const match = url.match(regExp);
-            const vId = (match && match[2].length == 11) ? match[2] : null;
-
-            const tag = document.createElement('script');
-            tag.src = "https://www.youtube.com/iframe_api";
-            document.head.appendChild(tag);
-
-            window.onYouTubeIframeAPIReady = () => {
-                ytPlayer = new YT.Player('yt', {
-                    videoId: vId,
-                    playerVars: { 'autoplay': 0, 'controls': isAdmin ? 1 : 0, 'rel': 0, 'origin': window.location.origin },
-                    events: {
-                        'onStateChange': (e) => {
-                            if(isAdmin) {
-                                let s = (e.data == 1) ? 1 : 0;
-                                db.collection('rooms').doc(roomCode).update({ status: s, time: ytPlayer.getCurrentTime() });
-                            }
-                        }
-                    }
-                });
-            };
-        }
-
-        function setupVid(v) {
-            if(isAdmin) {
-                v.onplay = () => db.collection('rooms').doc(roomCode).update({ status: 1, time: v.currentTime });
-                v.onpause = () => db.collection('rooms').doc(roomCode).update({ status: 0, time: v.currentTime });
-                setInterval(() => { if(!v.paused) db.collection('rooms').doc(roomCode).update({ time: v.currentTime }); }, 3000);
-            }
-        }
-
-        // Senkronizasyon Takibi
-        db.collection('rooms').doc(roomCode).onSnapshot(doc => {
-            const d = doc.data();
-            if(!isAdmin && d) {
-                if(d.status == 1 && lastStatus == 0) document.getElementById('syncOverlay').style.display = 'flex';
-                if(d.status == 0) {
-                    const v = document.getElementById('vid');
-                    if(v.src) v.pause();
-                    if(ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
-                    document.getElementById('syncOverlay').style.display = 'none';
+                ytEl.style.display = 'block';
+                const vId = d.url.match(/(?:youtu\.be\/|youtube\.com.*v=)([\w\-]{11})/)[1];
+                if(ytPlayer) { ytPlayer.loadVideoById(vId); } else {
+                    new YT.Player('yt', { videoId: vId, playerVars: { controls: isAdmin ? 1 : 0 }, events: { 'onStateChange': e => isAdmin && db.collection('rooms').doc(roomCode).update({ status: e.data==1?1:0, time: e.target.getCurrentTime() }) } });
                 }
-                lastStatus = d.status;
+            } else if (d.type === 'drive' || d.url.includes('drive.google.com')) {
+                ifr.style.display = 'block';
+                ifr.src = d.url.includes('/view') ? d.url.replace('/view', '/preview') : d.url;
+            } else if (d.type === 'direct' || d.url.match(/\.(mp4|webm|m3u8)$/)) {
+                v.style.display = 'block'; v.src = d.url; v.controls = isAdmin;
+                if(isAdmin) {
+                    v.onplay = () => db.collection('rooms').doc(roomCode).update({ status: 1, time: v.currentTime });
+                    v.onpause = () => db.collection('rooms').doc(roomCode).update({ status: 0, time: v.currentTime });
+                }
+            } else {
+                ifr.style.display = 'block'; ifr.src = d.url;
+                if(d.url.includes("google.com")) err.style.display = 'block';
             }
-        });
+        }
 
-        document.getElementById('syncAction').onclick = () => {
-            db.collection('rooms').doc(roomCode).get().then(doc => {
-                const d = doc.data();
-                const v = document.getElementById('vid');
-                if(v.style.display !== 'none') { v.currentTime = d.time; v.play(); }
-                if(ytPlayer) { ytPlayer.seekTo(d.time); ytPlayer.playVideo(); }
-                document.getElementById('syncOverlay').style.display = 'none';
-            });
+        function changeVideo() {
+            const url = document.getElementById('newUrl').value;
+            if(url) db.collection('rooms').doc(roomCode).update({ url: url, status: 0, time: 0 });
+        }
+
+        const chatToggle = document.getElementById('chatToggle'), chatWin = document.getElementById('chatWin');
+        chatToggle.onclick = () => {
+            chatWin.classList.toggle('active');
+            chatToggle.classList.toggle('open');
+            chatToggle.textContent = chatWin.classList.contains('active') ? '✕' : '💬';
         };
 
-        // --- SOHBET SİSTEMİ (Herkes Yazabilir) ---
-        const mBox = document.getElementById('msgs'), mInp = document.getElementById('mInp'), mBtn = document.getElementById('mBtn');
-        
-        const sendMsg = () => {
-            if(!mInp.value.trim()) return;
-            db.collection('rooms').doc(roomCode).collection('messages').add({ 
-                s: userName, t: mInp.value, ts: firebase.firestore.FieldValue.serverTimestamp() 
-            });
-            mInp.value = "";
-        };
+        document.getElementById('mBtn').onclick = sendMsg;
+        document.getElementById('mInp').onkeydown = (e) => { if(e.key === 'Enter') sendMsg(); };
 
-        mBtn.onclick = sendMsg;
-        mInp.onkeypress = (e) => e.key === 'Enter' && sendMsg();
+        function sendMsg() {
+            const inp = document.getElementById('mInp'); if(!inp.value.trim()) return;
+            db.collection('rooms').doc(roomCode).collection('messages').add({ s: userName, t: inp.value.trim(), ts: Date.now() });
+            inp.value = "";
+        }
 
         db.collection('rooms').doc(roomCode).collection('messages').orderBy('ts').onSnapshot(q => {
-            q.docChanges().forEach(c => { if(c.type === 'added') {
-                const m = c.doc.data();
+            const msgs = document.getElementById('msgs'); msgs.innerHTML = "";
+            q.forEach(doc => {
+                const m = doc.data();
                 const div = document.createElement('div');
                 div.className = `msg ${m.s === userName ? 'own' : ''}`;
-                div.innerHTML = `<b>${m.s}:</b> ${m.t}`;
-                mBox.appendChild(div); mBox.scrollTop = mBox.scrollHeight;
-            }});
+                div.innerHTML = `<b>${m.s}</b>${m.t}`;
+                msgs.appendChild(div);
+            });
+            msgs.scrollTop = msgs.scrollHeight;
         });
+
+        function syncClient(d) {
+            const v = document.getElementById('vid');
+            if(d.status == 1 && v.style.display !== 'none') {
+                if(Math.abs(v.currentTime - d.time) > 3) v.currentTime = d.time;
+                v.play().catch(() => {});
+            } else if (d.status == 0 && v.style.display !== 'none') { v.pause(); }
+        }
     </script>
+    <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
