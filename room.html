@@ -8,7 +8,6 @@
     <style>
         :root {
             --amber: #f59e0b;
-            --indigo: #6366f1;
             --bg: #080a0e;
             --surface: rgba(255,255,255,0.04);
             --border: rgba(255,255,255,0.08);
@@ -22,13 +21,14 @@
             background: #000;
             font-family: 'DM Sans', sans-serif;
             height: 100vh;
-            overflow: hidden;
+            overflow: auto;
             color: var(--text);
         }
 
         .v-container {
             width: 100vw;
             height: 100vh;
+            min-height: 300px;
             position: relative;
             background: #000;
         }
@@ -53,7 +53,6 @@
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.1);
             font-size: 0.82rem;
-            font-weight: 400;
             color: rgba(255,255,255,0.7);
             display: flex;
             align-items: center;
@@ -69,8 +68,7 @@
         }
 
         .badge-icon {
-            width: 7px;
-            height: 7px;
+            width: 7px; height: 7px;
             border-radius: 50%;
             background: #22c55e;
             box-shadow: 0 0 6px #22c55e;
@@ -81,6 +79,114 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.4; }
         }
+
+        /* ─── Queue Bar (üst orta) ────────────────────────── */
+        #queueBar {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(8,10,14,0.82);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 6px 10px;
+            max-width: calc(100vw - 380px);
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        #queueBar::-webkit-scrollbar { display: none; }
+        #queueBar.empty { display: none; }
+
+        .q-label {
+            font-size: 0.68rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--muted);
+            white-space: nowrap;
+            padding-right: 8px;
+            border-right: 1px solid rgba(255,255,255,0.1);
+            margin-right: 2px;
+            font-weight: 600;
+        }
+
+        .q-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.55);
+            white-space: nowrap;
+            max-width: 170px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: all 0.2s;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .q-item.active-q {
+            background: rgba(245,158,11,0.18);
+            border-color: rgba(245,158,11,0.4);
+            color: var(--amber);
+        }
+
+        .q-num {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 0.9rem;
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+
+        .q-item.active-q .q-num { color: var(--amber); }
+
+        .q-url {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .q-del {
+            opacity: 0;
+            cursor: pointer;
+            font-size: 10px;
+            color: #f87171;
+            flex-shrink: 0;
+            padding-left: 4px;
+            transition: opacity 0.15s;
+            line-height: 1;
+        }
+
+        .q-item:hover .q-del { opacity: 1; }
+
+        #nextBtn {
+            display: none;
+            align-items: center;
+            gap: 5px;
+            background: var(--amber);
+            border: none;
+            border-radius: 9px;
+            padding: 5px 13px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #0a0a0a;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        #nextBtn:hover { transform: scale(1.05); box-shadow: 0 4px 14px rgba(245,158,11,0.35); }
 
         /* ─── Admin Panel ─────────────────────────────────── */
         #adminPanel {
@@ -108,6 +214,7 @@
         }
 
         #adminPanel input:focus { border-color: rgba(245,158,11,0.5); }
+        #adminPanel input::placeholder { color: var(--muted); }
 
         #adminPanel button {
             background: var(--amber);
@@ -117,20 +224,23 @@
             color: #0a0a0a;
             cursor: pointer;
             font-weight: 700;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             transition: all 0.2s;
+            white-space: nowrap;
         }
 
-        #adminPanel button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 16px rgba(245,158,11,0.3);
+        #adminPanel button.secondary {
+            background: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.12);
         }
+
+        #adminPanel button:hover { transform: scale(1.04); }
 
         /* ─── Iframe Error ────────────────────────────────── */
         #iframeError {
             position: absolute;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             background: rgba(239,68,68,0.1);
             border: 1px solid rgba(239,68,68,0.3);
@@ -147,18 +257,31 @@
         #iframeError h3 { font-size: 1rem; color: #fca5a5; margin-bottom: 8px; }
         #iframeError p { font-size: 0.85rem; color: rgba(252,165,165,0.7); line-height: 1.5; }
 
-        /* ─── Chat Toggle Button ──────────────────────────── */
+        /* ─── Bottom Buttons ──────────────────────────────── */
+        #fsBtn {
+            position: fixed;
+            bottom: 28px; right: 94px;
+            width: 54px; height: 54px;
+            background: rgba(8,10,14,0.82);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            font-size: 20px;
+            transition: all 0.25s;
+            backdrop-filter: blur(12px);
+        }
+
+        #fsBtn:hover { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.4); transform: scale(1.08); }
+
         #chatToggle {
             position: fixed;
-            bottom: 28px;
-            right: 28px;
-            width: 54px;
-            height: 54px;
+            bottom: 28px; right: 28px;
+            width: 54px; height: 54px;
             background: var(--amber);
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             cursor: pointer;
             box-shadow: 0 8px 28px rgba(245,158,11,0.35);
             z-index: 100;
@@ -166,33 +289,54 @@
             transition: all 0.25s;
         }
 
-        #chatToggle:hover {
-            transform: scale(1.08);
-            box-shadow: 0 12px 36px rgba(245,158,11,0.45);
+        #chatToggle:hover { transform: scale(1.08); box-shadow: 0 12px 36px rgba(245,158,11,0.45); }
+        #chatToggle.open { background: rgba(8,10,14,0.9); box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+
+        /* ─── Unread Badge ────────────────────────────────── */
+        #unreadBadge {
+            position: absolute;
+            top: -6px; right: -6px;
+            min-width: 20px; height: 20px;
+            background: #ef4444;
+            border-radius: 10px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: white;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 0 5px;
+            box-shadow: 0 2px 8px rgba(239,68,68,0.6);
+            pointer-events: none;
+            font-family: 'DM Sans', sans-serif;
+            border: 2px solid #080a0e;
         }
 
-        #chatToggle.open {
-            background: rgba(8,10,14,0.9);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+        @keyframes badgePop {
+            0% { transform: scale(0); }
+            70% { transform: scale(1.25); }
+            100% { transform: scale(1); }
         }
 
         /* ─── Chat Window ─────────────────────────────────── */
         .chat-window {
             position: fixed;
-            bottom: 94px;
-            right: 28px;
-            width: 310px;
-            height: 440px;
+            bottom: 94px; right: 28px;
+            width: 310px; height: 440px;
             background: rgba(8,10,14,0.92);
             backdrop-filter: blur(24px);
             border-radius: 18px;
             display: none;
             flex-direction: column;
             border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.7);
             z-index: 99;
             overflow: hidden;
             transform-origin: bottom right;
+        }
+
+        .chat-window.active {
+            display: flex;
             animation: chatIn 0.2s ease both;
         }
 
@@ -200,8 +344,6 @@
             from { opacity: 0; transform: scale(0.92); }
             to { opacity: 1; transform: scale(1); }
         }
-
-        .chat-window.active { display: flex; }
 
         .chat-header {
             padding: 14px 18px;
@@ -218,8 +360,7 @@
 
         .chat-header::before {
             content: '';
-            width: 6px;
-            height: 6px;
+            width: 6px; height: 6px;
             border-radius: 50%;
             background: #22c55e;
             box-shadow: 0 0 6px #22c55e;
@@ -293,72 +434,31 @@
         .chat-input button {
             background: var(--amber);
             border: none;
-            width: 36px;
-            height: 36px;
+            width: 36px; height: 36px;
             border-radius: 10px;
             color: #0a0a0a;
             cursor: pointer;
             font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             transition: all 0.2s;
             flex-shrink: 0;
         }
 
         .chat-input button:hover { transform: scale(1.08); }
 
-        /* ─── Fullscreen Button ───────────────────────────── */
-        #fsBtn {
-            position: fixed;
-            bottom: 28px;
-            right: 94px;
-            width: 54px;
-            height: 54px;
-            background: rgba(8,10,14,0.82);
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 100;
-            font-size: 20px;
-            transition: all 0.25s;
-            backdrop-filter: blur(12px);
-        }
-
-        #fsBtn:hover {
-            background: rgba(245,158,11,0.15);
-            border-color: rgba(245,158,11,0.4);
-            transform: scale(1.08);
-        }
-
-        /* ─── Responsive / Flexible container ────────────── */
-        body {
-            overflow: auto;
-        }
-
-        .v-container {
-            width: 100vw;
-            height: 100vh;
-            min-height: 300px;
-            position: relative;
-            background: #000;
-        }
-
-        /* When not fullscreen, allow shrinking on small screens */
+        /* ─── Responsive ──────────────────────────────────── */
         @media (max-width: 600px) {
             .v-container { height: 56vw; min-height: 220px; }
             body { overflow: hidden; }
             .top-bar { top: 10px; left: 10px; gap: 5px; }
             .badge { padding: 5px 10px; font-size: 0.75rem; }
             #adminPanel { top: 10px; right: 10px; }
-            #adminPanel input { width: 140px; }
+            #adminPanel input { width: 130px; }
             .chat-window { width: calc(100vw - 24px); right: 12px; bottom: 88px; }
             #chatToggle, #fsBtn { width: 46px; height: 46px; bottom: 16px; }
             #chatToggle { right: 16px; }
             #fsBtn { right: 72px; }
+            #queueBar { max-width: calc(100vw - 20px); top: 60px; left: 10px; transform: none; }
         }
     </style>
 </head>
@@ -376,9 +476,17 @@
         <div class="badge" id="uDisp">...</div>
     </div>
 
+    <!-- Sıra çubuğu — üst orta -->
+    <div id="queueBar" class="empty">
+        <span class="q-label">Sıra</span>
+        <button id="nextBtn">▶ Sıradaki</button>
+    </div>
+
+    <!-- Admin panel — sağ üst -->
     <div id="adminPanel">
-        <input type="text" id="newUrl" placeholder="Yeni video linki...">
-        <button onclick="changeVideo()">🔄 Değiştir</button>
+        <input type="text" id="newUrl" placeholder="Video linki girin...">
+        <button onclick="addToQueue()">+ Sıraya Ekle</button>
+        <button class="secondary" onclick="playNow()">▶ Şimdi Oynat</button>
     </div>
 
     <div class="v-container">
@@ -388,7 +496,11 @@
     </div>
 
     <div id="fsBtn" title="Tam Ekran">⛶</div>
-    <div id="chatToggle">💬</div>
+
+    <div id="chatToggle" style="position:relative;">
+        <span id="chatIcon">💬</span>
+        <div id="unreadBadge">0</div>
+    </div>
 
     <div class="chat-window" id="chatWin">
         <div class="chat-header">Sohbet</div>
@@ -412,97 +524,84 @@
 
         document.getElementById('cDisp').textContent = roomCode;
 
+        // ─── Room Listener ────────────────────────────────
         db.collection('rooms').doc(roomCode).onSnapshot(doc => {
             const d = doc.data(); if(!d) return;
             isAdmin = (d.admin === userName);
             document.getElementById('uDisp').textContent = (isAdmin ? "👑 " : "👤 ") + userName;
             if(isAdmin) document.getElementById('adminPanel').style.display = 'flex';
+
+            renderQueue(d.queue || [], d.queueIndex || 0);
+
             if (currentUrl !== d.url) { currentUrl = d.url; loadPlayer(d); }
             if(!isAdmin) syncClient(d);
         });
 
-        function loadPlayer(d) {
-            const v = document.getElementById('vid'), ytEl = document.getElementById('yt'), ifr = document.getElementById('ifr');
-            const err = document.getElementById('iframeError');
-            v.style.display = ytEl.style.display = ifr.style.display = err.style.display = 'none';
+        // ─── Queue Render ─────────────────────────────────
+        function renderQueue(queue, activeIdx) {
+            const bar = document.getElementById('queueBar');
+            const nextBtn = document.getElementById('nextBtn');
 
-            if (d.url.includes("youtube.com") || d.url.includes("youtu.be")) {
-                ytEl.style.display = 'block';
-                const vId = d.url.match(/(?:youtu\.be\/|youtube\.com.*v=)([\w\-]{11})/)[1];
-                if(ytPlayer) { ytPlayer.loadVideoById(vId); } else {
-                    new YT.Player('yt', { videoId: vId, playerVars: { controls: isAdmin ? 1 : 0 }, events: { 'onStateChange': e => isAdmin && db.collection('rooms').doc(roomCode).update({ status: e.data==1?1:0, time: e.target.getCurrentTime() }) } });
+            // Önceki q-item'ları temizle
+            bar.querySelectorAll('.q-item').forEach(el => el.remove());
+
+            if (queue.length === 0) {
+                bar.classList.add('empty');
+                nextBtn.style.display = 'none';
+                return;
+            }
+
+            bar.classList.remove('empty');
+
+            queue.forEach((item, i) => {
+                const el = document.createElement('div');
+                el.className = 'q-item' + (i === activeIdx ? ' active-q' : '');
+
+                const num = document.createElement('span');
+                num.className = 'q-num';
+                num.textContent = i + 1;
+
+                const urlSpan = document.createElement('span');
+                urlSpan.className = 'q-url';
+                // Kısa gösterim: domain veya son 24 karakter
+                try {
+                    const hostname = new URL(item.url).hostname.replace('www.','');
+                    urlSpan.textContent = hostname;
+                    urlSpan.title = item.url;
+                } catch(e) {
+                    urlSpan.textContent = item.url.length > 22 ? item.url.slice(0,22)+'…' : item.url;
                 }
-            } else if (d.type === 'drive' || d.url.includes('drive.google.com')) {
-                ifr.style.display = 'block';
-                ifr.src = d.url.includes('/view') ? d.url.replace('/view', '/preview') : d.url;
-            } else if (d.type === 'direct' || d.url.match(/\.(mp4|webm|m3u8)$/)) {
-                v.style.display = 'block'; v.src = d.url; v.controls = isAdmin;
+
+                el.appendChild(num);
+                el.appendChild(urlSpan);
+
                 if(isAdmin) {
-                    v.onplay = () => db.collection('rooms').doc(roomCode).update({ status: 1, time: v.currentTime });
-                    v.onpause = () => db.collection('rooms').doc(roomCode).update({ status: 0, time: v.currentTime });
+                    const del = document.createElement('span');
+                    del.className = 'q-del';
+                    del.textContent = '✕';
+                    del.title = 'Sıradan Kaldır';
+                    del.onclick = (e) => { e.stopPropagation(); removeFromQueue(i); };
+                    el.appendChild(del);
                 }
-            } else {
-                ifr.style.display = 'block'; ifr.src = d.url;
-                if(d.url.includes("google.com")) err.style.display = 'block';
-            }
-        }
 
-        function changeVideo() {
-            const url = document.getElementById('newUrl').value;
-            if(url) db.collection('rooms').doc(roomCode).update({ url: url, status: 0, time: 0 });
-        }
-
-        // ─── Fullscreen ───────────────────────────────────
-        const fsBtn = document.getElementById('fsBtn');
-        fsBtn.onclick = () => {
-            const el = document.documentElement;
-            if (!document.fullscreenElement) {
-                (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen).call(el);
-            } else {
-                (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen).call(document);
-            }
-        };
-        document.addEventListener('fullscreenchange', () => {
-            fsBtn.textContent = document.fullscreenElement ? '✕' : '⛶';
-            fsBtn.title = document.fullscreenElement ? 'Tam Ekrandan Çık' : 'Tam Ekran';
-        });
-
-        const chatToggle = document.getElementById('chatToggle'), chatWin = document.getElementById('chatWin');
-        chatToggle.onclick = () => {
-            chatWin.classList.toggle('active');
-            chatToggle.classList.toggle('open');
-            chatToggle.textContent = chatWin.classList.contains('active') ? '✕' : '💬';
-        };
-
-        document.getElementById('mBtn').onclick = sendMsg;
-        document.getElementById('mInp').onkeydown = (e) => { if(e.key === 'Enter') sendMsg(); };
-
-        function sendMsg() {
-            const inp = document.getElementById('mInp'); if(!inp.value.trim()) return;
-            db.collection('rooms').doc(roomCode).collection('messages').add({ s: userName, t: inp.value.trim(), ts: Date.now() });
-            inp.value = "";
-        }
-
-        db.collection('rooms').doc(roomCode).collection('messages').orderBy('ts').onSnapshot(q => {
-            const msgs = document.getElementById('msgs'); msgs.innerHTML = "";
-            q.forEach(doc => {
-                const m = doc.data();
-                const div = document.createElement('div');
-                div.className = `msg ${m.s === userName ? 'own' : ''}`;
-                div.innerHTML = `<b>${m.s}</b>${m.t}`;
-                msgs.appendChild(div);
+                bar.insertBefore(el, nextBtn);
             });
-            msgs.scrollTop = msgs.scrollHeight;
-        });
 
-        function syncClient(d) {
-            const v = document.getElementById('vid');
-            if(d.status == 1 && v.style.display !== 'none') {
-                if(Math.abs(v.currentTime - d.time) > 3) v.currentTime = d.time;
-                v.play().catch(() => {});
-            } else if (d.status == 0 && v.style.display !== 'none') { v.pause(); }
+            if(isAdmin && queue.length > 1) {
+                nextBtn.style.display = 'flex';
+            } else {
+                nextBtn.style.display = 'none';
+            }
         }
-    </script>
-    <script src="https://www.youtube.com/iframe_api"></script>
-</body>
-</html>
+
+        // ─── Queue Actions ────────────────────────────────
+        function addToQueue() {
+            const url = document.getElementById('newUrl').value.trim();
+            if(!url) return;
+            db.collection('rooms').doc(roomCode).get().then(doc => {
+                const d = doc.data();
+                const queue = d.queue || [];
+                queue.push({ url });
+                // İlk ekleme ise hemen oynat
+                const isFirst = queue.length === 1;
+  
