@@ -4,600 +4,445 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>W4TCH US · Oda</title>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --amber: #f59e0b;
-            --muted: #64748b;
+        :root { --amber:#f59e0b; --muted:#64748b; }
+        *{ box-sizing:border-box; margin:0; padding:0; }
+        html,body{ width:100%; height:100%; background:#000; font-family:'DM Sans',sans-serif; color:#e2e8f0; overflow:hidden; }
+
+        /* ─ Player kap ─ */
+        #pw{ position:fixed; inset:0; background:#000; z-index:0; }
+        /* YT wrapper — YT.Player bu div'in içine iframe oluşturur */
+        #yt-wrap{ position:absolute; inset:0; display:none; }
+        #yt-wrap iframe{ width:100%!important; height:100%!important; }
+        #vid{ position:absolute; inset:0; width:100%; height:100%; border:none; display:none; background:#000; }
+        #ifr{ position:absolute; inset:0; width:100%; height:100%; border:none; display:none; }
+        #ifrErr{
+            display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+            background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.35);
+            border-left:3px solid #ef4444; padding:20px 28px; border-radius:14px;
+            text-align:center; max-width:80vw; z-index:2; color:#fca5a5;
+        }
+        #ifrErr h3{ font-size:.95rem; margin-bottom:6px; }
+        #ifrErr p{ font-size:.8rem; opacity:.7; line-height:1.5; }
+
+        /* ─ UI overlay (pointer-events açık) ─ */
+        #ui{ position:fixed; inset:0; z-index:10; pointer-events:none; }
+        /* Tüm torunlara pointer-events ver */
+        #ui *{ pointer-events:auto; }
+
+        /* ─ Sol üst ─ */
+        #topLeft{ position:absolute; top:14px; left:14px; display:flex; gap:7px; align-items:center; }
+        .badge{
+            background:rgba(0,0,0,.78); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+            padding:6px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.12);
+            font-size:.78rem; color:rgba(255,255,255,.7); display:flex; align-items:center; gap:6px; white-space:nowrap;
+        }
+        .badge b{ color:var(--amber); font-family:'Bebas Neue',cursive; font-size:.95rem; letter-spacing:1px; }
+        .dot{ width:6px; height:6px; border-radius:50%; background:#22c55e; box-shadow:0 0 5px #22c55e; animation:blink 2s ease infinite; flex-shrink:0; }
+        @keyframes blink{ 0%,100%{opacity:1} 50%{opacity:.35} }
+
+        /* ─ Sıra çubuğu ─ */
+        #qbar{
+            position:absolute; top:14px; left:50%; transform:translateX(-50%);
+            display:flex; align-items:center; gap:5px;
+            background:rgba(0,0,0,.78); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+            border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:5px 9px;
+            max-width:min(calc(100vw - 30px),500px); overflow-x:auto; scrollbar-width:none;
+        }
+        #qbar::-webkit-scrollbar{ display:none; }
+        #qbar.hide{ display:none; }
+        .qlbl{ font-size:.62rem; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); white-space:nowrap; padding-right:7px; border-right:1px solid rgba(255,255,255,.1); font-weight:600; flex-shrink:0; }
+        .qp{ display:flex; align-items:center; gap:4px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.09); border-radius:7px; padding:3px 9px; font-size:.74rem; color:rgba(255,255,255,.5); white-space:nowrap; flex-shrink:0; }
+        .qp.on{ background:rgba(245,158,11,.18); border-color:rgba(245,158,11,.4); color:var(--amber); }
+        .qp .n{ font-family:'Bebas Neue',cursive; font-size:.85rem; opacity:.7; }
+        .qp.on .n{ opacity:1; }
+        .qp .t{ overflow:hidden; text-overflow:ellipsis; max-width:85px; }
+        .qdel{ opacity:0; cursor:pointer; font-size:9px; color:#f87171; padding-left:3px; flex-shrink:0; }
+        .qp:hover .qdel{ opacity:1; }
+        #nxtBtn{
+            display:none; align-items:center; gap:4px; background:var(--amber); border:none;
+            border-radius:7px; padding:4px 11px; font-family:'DM Sans',sans-serif; font-size:.74rem;
+            font-weight:700; color:#0a0a0a; cursor:pointer; white-space:nowrap; flex-shrink:0;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        /* ─ Admin panel ─ */
+        #ap{ position:absolute; top:14px; right:14px; display:none; flex-direction:column; align-items:flex-end; gap:6px; }
+        #apRow{ display:flex; gap:6px; align-items:center; }
+        #ap input{
+            background:rgba(0,0,0,.82); border:1px solid rgba(255,255,255,.15); padding:7px 12px;
+            border-radius:10px; color:#fff; width:min(200px,42vw); outline:none;
+            font-family:'DM Sans',sans-serif; font-size:.82rem; transition:border-color .2s;
+        }
+        #ap input:focus{ border-color:rgba(245,158,11,.5); }
+        #ap input::placeholder{ color:var(--muted); }
+        .ab{ background:var(--amber); border:none; padding:7px 11px; border-radius:9px; color:#0a0a0a; cursor:pointer; font-weight:700; font-size:.75rem; white-space:nowrap; }
+        .ab.s{ background:rgba(255,255,255,.08); color:rgba(255,255,255,.65); border:1px solid rgba(255,255,255,.12); }
 
-        html, body {
-            width: 100%;
-            height: 100%;
-            background: #000;
-            font-family: 'DM Sans', sans-serif;
-            color: #e2e8f0;
-            overflow: hidden;
-        }
+        /* ─ Sağ alt ─ */
+        #br{ position:absolute; bottom:22px; right:16px; display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
 
-        /* ══════════════════════════════════════
-           LAYOUT: video tam ekran, UI üstünde yüzer
-        ══════════════════════════════════════ */
-        #player-wrapper {
-            position: fixed;
-            inset: 0;
-            background: #000;
-            z-index: 0;
+        /* Chat penceresi */
+        #cw{
+            width:min(300px,calc(100vw - 32px)); height:min(420px,calc(100vh - 140px));
+            background:rgba(8,10,14,.96); border-radius:16px; display:none; flex-direction:column;
+            border:1px solid rgba(255,255,255,.1); box-shadow:0 20px 50px rgba(0,0,0,.8); overflow:hidden;
         }
+        #cw.open{ display:flex; animation:popIn .2s ease both; }
+        @keyframes popIn{ from{opacity:0;transform:scale(.9) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        .chdr{ padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.07); font-size:.72rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted); font-weight:600; display:flex; align-items:center; gap:7px; }
+        .chdr::before{ content:''; width:6px; height:6px; border-radius:50%; background:#22c55e; box-shadow:0 0 5px #22c55e; }
+        #msgs{ flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:5px; }
+        #msgs::-webkit-scrollbar{ width:3px; }
+        #msgs::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.1); }
+        .msg{ padding:7px 11px; border-radius:10px; font-size:.82rem; max-width:88%; word-break:break-word; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.06); line-height:1.4; color:rgba(255,255,255,.82); }
+        .msg b{ color:var(--amber); font-size:.72rem; display:block; margin-bottom:2px; }
+        .msg.own{ align-self:flex-end; background:rgba(245,158,11,.14); border-color:rgba(245,158,11,.22); }
+        .msg.own b{ color:#fcd34d; }
+        .ci{ padding:10px; display:flex; gap:7px; border-top:1px solid rgba(255,255,255,.07); }
+        .ci input{ flex:1; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); padding:8px 12px; border-radius:9px; color:#fff; font-family:'DM Sans',sans-serif; font-size:.83rem; outline:none; }
+        .ci input:focus{ border-color:rgba(245,158,11,.4); }
+        .ci input::placeholder{ color:var(--muted); }
+        .ci button{ background:var(--amber); border:none; width:34px; height:34px; border-radius:9px; color:#0a0a0a; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 
-        #yt, #ifr, #vid {
-            width: 100%;
-            height: 100%;
-            border: none;
-            display: block;
-        }
+        /* Buton sırası */
+        #btnRow{ display:flex; gap:10px; align-items:center; }
+        .cb{ width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; border:none; transition:transform .2s; flex-shrink:0; position:relative; }
+        #fsBtn{ background:rgba(0,0,0,.78); border:1px solid rgba(255,255,255,.15); color:#fff; }
+        #chatBtn{ background:var(--amber); box-shadow:0 6px 20px rgba(245,158,11,.35); color:#0a0a0a; }
+        #chatBtn.on{ background:rgba(20,20,20,.92); color:#fff; border:1px solid rgba(255,255,255,.15); box-shadow:none; }
+        #ub{ position:absolute; top:-4px; right:-4px; min-width:18px; height:18px; background:#ef4444; border-radius:9px; font-size:.62rem; font-weight:700; color:#fff; display:none; align-items:center; justify-content:center; padding:0 4px; border:2px solid #000; pointer-events:none; font-family:'DM Sans',sans-serif; }
+        @keyframes pop{ 0%{transform:scale(0)} 65%{transform:scale(1.3)} 100%{transform:scale(1)} }
 
-        #iframeError {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(239,68,68,0.12);
-            border: 1px solid rgba(239,68,68,0.35);
-            border-left: 3px solid #ef4444;
-            padding: 20px 28px;
-            border-radius: 14px;
-            text-align: center;
-            display: none;
-            z-index: 2;
-            max-width: 80vw;
-        }
-        #iframeError h3 { font-size: 0.95rem; color: #fca5a5; margin-bottom: 6px; }
-        #iframeError p  { font-size: 0.8rem;  color: rgba(252,165,165,0.7); line-height: 1.5; }
-
-        /* ══════════════════════════════════════
-           TOP BAR — sol üst köşe
-        ══════════════════════════════════════ */
-        #topLeft {
-            position: fixed;
-            top: 14px; left: 14px;
-            z-index: 50;
-            display: flex;
-            gap: 7px;
-            align-items: center;
-        }
-
-        .badge {
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            padding: 6px 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.12);
-            font-size: 0.78rem;
-            color: rgba(255,255,255,0.7);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            white-space: nowrap;
-        }
-
-        .badge b {
-            color: var(--amber);
-            font-family: 'Bebas Neue', cursive;
-            font-size: 0.95rem;
-            letter-spacing: 1px;
-        }
-
-        .dot {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: #22c55e;
-            box-shadow: 0 0 5px #22c55e;
-            animation: blink 2s ease infinite;
-            flex-shrink: 0;
-        }
-
-        @keyframes blink {
-            0%,100% { opacity: 1; }
-            50% { opacity: 0.35; }
-        }
-
-        /* ══════════════════════════════════════
-           QUEUE BAR — üst orta, yatay kaydırmalı
-        ══════════════════════════════════════ */
-        #queueBar {
-            position: fixed;
-            top: 14px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 50;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            background: rgba(0,0,0,0.72);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            padding: 5px 9px;
-            max-width: min(calc(100vw - 30px), 520px);
-            overflow-x: auto;
-            scrollbar-width: none;
-        }
-        #queueBar::-webkit-scrollbar { display: none; }
-        #queueBar.hidden { display: none; }
-
-        .q-label {
-            font-size: 0.64rem;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            color: var(--muted);
-            white-space: nowrap;
-            padding-right: 7px;
-            border-right: 1px solid rgba(255,255,255,0.1);
-            font-weight: 600;
-            flex-shrink: 0;
-        }
-
-        .q-pill {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.09);
-            border-radius: 7px;
-            padding: 3px 9px;
-            font-size: 0.74rem;
-            color: rgba(255,255,255,0.5);
-            white-space: nowrap;
-            flex-shrink: 0;
-            transition: all 0.2s;
-            cursor: default;
-        }
-
-        .q-pill.playing {
-            background: rgba(245,158,11,0.18);
-            border-color: rgba(245,158,11,0.4);
-            color: var(--amber);
-        }
-
-        .q-pill .pn {
-            font-family: 'Bebas Neue', cursive;
-            font-size: 0.85rem;
-            opacity: 0.7;
-        }
-
-        .q-pill.playing .pn { opacity: 1; }
-
-        .q-del {
-            opacity: 0;
-            cursor: pointer;
-            font-size: 9px;
-            color: #f87171;
-            padding-left: 3px;
-            transition: opacity 0.15s;
-            flex-shrink: 0;
-        }
-        .q-pill:hover .q-del { opacity: 1; }
-
-        #nextBtn {
-            display: none;
-            align-items: center;
-            gap: 4px;
-            background: var(--amber);
-            border: none;
-            border-radius: 7px;
-            padding: 4px 11px;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 0.74rem;
-            font-weight: 700;
-            color: #0a0a0a;
-            cursor: pointer;
-            white-space: nowrap;
-            flex-shrink: 0;
-            transition: all 0.2s;
-        }
-        #nextBtn:hover { transform: scale(1.04); }
-
-        /* ══════════════════════════════════════
-           ADMIN PANEL — sağ üst (sadece admin)
-        ══════════════════════════════════════ */
-        #adminPanel {
-            position: fixed;
-            top: 14px; right: 14px;
-            z-index: 50;
-            display: none;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 6px;
-        }
-
-        #adminInputRow {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-        }
-
-        #adminPanel input {
-            background: rgba(0,0,0,0.75);
-            border: 1px solid rgba(255,255,255,0.15);
-            padding: 7px 12px;
-            border-radius: 10px;
-            color: white;
-            width: min(200px, 45vw);
-            outline: none;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 0.82rem;
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            transition: border-color 0.2s;
-        }
-        #adminPanel input:focus { border-color: rgba(245,158,11,0.5); }
-        #adminPanel input::placeholder { color: var(--muted); }
-
-        .abtn {
-            background: var(--amber);
-            border: none;
-            padding: 7px 11px;
-            border-radius: 9px;
-            color: #0a0a0a;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 0.75rem;
-            transition: all 0.2s;
-            white-space: nowrap;
-        }
-
-        .abtn.secondary {
-            background: rgba(255,255,255,0.08);
-            color: rgba(255,255,255,0.65);
-            border: 1px solid rgba(255,255,255,0.12);
-        }
-
-        .abtn:hover { transform: scale(1.04); }
-
-        /* ══════════════════════════════════════
-           BOTTOM RIGHT BUTTONS
-        ══════════════════════════════════════ */
-        #bottomRight {
-            position: fixed;
-            bottom: 22px; right: 16px;
-            z-index: 50;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 10px;
-        }
-
-        /* Chat Window */
-        #chatWin {
-            width: min(300px, calc(100vw - 32px));
-            height: min(420px, calc(100vh - 130px));
-            background: rgba(8,10,14,0.94);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 16px;
-            display: none;
-            flex-direction: column;
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-            overflow: hidden;
-            transform-origin: bottom right;
-        }
-
-        #chatWin.open {
-            display: flex;
-            animation: popIn 0.2s ease both;
-        }
-
-        @keyframes popIn {
-            from { opacity: 0; transform: scale(0.9); }
-            to   { opacity: 1; transform: scale(1); }
-        }
-
-        .chat-hdr {
-            padding: 12px 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.07);
-            font-size: 0.72rem;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: var(--muted);
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 7px;
-        }
-        .chat-hdr::before {
-            content: '';
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: #22c55e;
-            box-shadow: 0 0 5px #22c55e;
-        }
-
-        #msgs {
-            flex: 1;
-            overflow-y: auto;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255,255,255,0.08) transparent;
-        }
-        #msgs::-webkit-scrollbar { width: 3px; }
-        #msgs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
-
-        .msg {
-            padding: 7px 11px;
-            border-radius: 10px;
-            font-size: 0.82rem;
-            max-width: 88%;
-            word-break: break-word;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.06);
-            line-height: 1.4;
-            color: rgba(255,255,255,0.82);
-        }
-        .msg b {
-            color: var(--amber);
-            font-size: 0.72rem;
-            display: block;
-            margin-bottom: 2px;
-        }
-        .msg.own {
-            align-self: flex-end;
-            background: rgba(245,158,11,0.14);
-            border-color: rgba(245,158,11,0.22);
-        }
-        .msg.own b { color: #fcd34d; }
-
-        .chat-inp {
-            padding: 10px;
-            display: flex;
-            gap: 7px;
-            border-top: 1px solid rgba(255,255,255,0.07);
-        }
-        .chat-inp input {
-            flex: 1;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.08);
-            padding: 8px 12px;
-            border-radius: 9px;
-            color: white;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 0.83rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .chat-inp input:focus { border-color: rgba(245,158,11,0.4); }
-        .chat-inp input::placeholder { color: var(--muted); }
-        .chat-inp button {
-            background: var(--amber);
-            border: none;
-            width: 34px; height: 34px;
-            border-radius: 9px;
-            color: #0a0a0a;
-            cursor: pointer;
-            font-size: 15px;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-            transition: transform 0.15s;
-        }
-        .chat-inp button:hover { transform: scale(1.08); }
-
-        /* Buton grubu (fs + chat) */
-        #btnRow {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            justify-content: flex-end;
-        }
-
-        .circ-btn {
-            width: 50px; height: 50px;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer;
-            font-size: 20px;
-            transition: all 0.2s;
-            flex-shrink: 0;
-            border: none;
-            position: relative;
-        }
-
-        #fsBtn {
-            background: rgba(0,0,0,0.75);
-            border: 1px solid rgba(255,255,255,0.15);
-            color: white;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-        #fsBtn:hover { border-color: rgba(245,158,11,0.5); background: rgba(245,158,11,0.12); }
-
-        #chatBtn {
-            background: var(--amber);
-            box-shadow: 0 6px 20px rgba(245,158,11,0.35);
-            color: #0a0a0a;
-        }
-        #chatBtn:hover { transform: scale(1.08); box-shadow: 0 10px 28px rgba(245,158,11,0.45); }
-        #chatBtn.open-chat { background: rgba(0,0,0,0.8); color: white; border: 1px solid rgba(255,255,255,0.15); box-shadow: none; }
-
-        /* Unread badge */
-        #unreadBadge {
-            position: absolute;
-            top: -4px; right: -4px;
-            min-width: 18px; height: 18px;
-            background: #ef4444;
-            border-radius: 9px;
-            font-size: 0.62rem;
-            font-weight: 700;
-            color: white;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 0 4px;
-            border: 2px solid #000;
-            pointer-events: none;
-        }
-
-        @keyframes pop {
-            0% { transform: scale(0); }
-            70% { transform: scale(1.3); }
-            100% { transform: scale(1); }
-        }
-
-        /* ══════════════════════════════════════
-           MOBILE tweaks
-        ══════════════════════════════════════ */
-        @media (max-width: 480px) {
-            #topLeft { top: 10px; left: 10px; gap: 5px; }
-            .badge { padding: 5px 9px; font-size: 0.72rem; }
-            #queueBar { top: 52px; left: 10px; transform: none; max-width: calc(100vw - 20px); }
-            #adminPanel { top: 10px; right: 10px; }
-            #adminPanel input { width: min(140px, 38vw); font-size: 0.78rem; }
-            .abtn { font-size: 0.7rem; padding: 6px 9px; }
-            #bottomRight { bottom: 16px; right: 12px; }
-            .circ-btn { width: 44px; height: 44px; font-size: 18px; }
+        /* ─ Mobil ─ */
+        @media(max-width:480px){
+            #topLeft{ top:10px; left:10px; gap:5px; }
+            .badge{ padding:5px 9px; font-size:.72rem; }
+            #qbar{ top:52px; left:10px; transform:none; max-width:calc(100vw - 20px); }
+            #ap{ top:10px; right:10px; }
+            #ap input{ width:min(130px,36vw); font-size:.76rem; }
+            .ab{ font-size:.68rem; padding:6px 8px; }
+            #br{ bottom:14px; right:12px; }
+            .cb{ width:44px; height:44px; font-size:18px; }
         }
     </style>
 </head>
 <body>
 
-<!-- ── Player ─────────────────────────────── -->
-<div id="player-wrapper">
-    <div id="yt"></div>
-    <video id="vid" style="display:none" playsinline></video>
-    <iframe id="ifr" style="display:none" sandbox="allow-forms allow-scripts allow-same-origin" allowfullscreen></iframe>
-    <div id="iframeError">
-        <h3>🚨 İçerik Yüklenemedi</h3>
-        <p>Bu site iframe bağlantısını engelliyor. Direkt video linki kullanın.</p>
+<!-- Player -->
+<div id="pw">
+    <div id="yt-wrap"><!-- YT iframe buraya gelir --></div>
+    <video id="vid" playsinline></video>
+    <iframe id="ifr" sandbox="allow-forms allow-scripts allow-same-origin allow-presentation" allowfullscreen></iframe>
+    <div id="ifrErr"><h3>🚨 İçerik Yüklenemedi</h3><p>Bu site iframe bağlantısını engelliyor. Direkt video linki kullanın.</p></div>
+</div>
+
+<!-- UI -->
+<div id="ui">
+
+    <div id="topLeft">
+        <div class="badge"><div class="dot"></div>Oda&nbsp;<b id="cDisp"></b></div>
+        <div class="badge" id="uDisp">...</div>
     </div>
-</div>
 
-<!-- ── Sol üst: oda bilgisi ───────────────── -->
-<div id="topLeft">
-    <div class="badge"><div class="dot"></div>Oda&nbsp;<b id="cDisp"></b></div>
-    <div class="badge" id="uDisp">...</div>
-</div>
-
-<!-- ── Üst orta: sıra çubuğu ─────────────── -->
-<div id="queueBar" class="hidden">
-    <span class="q-label">Sıra</span>
-    <button id="nextBtn">▶ Sıradaki</button>
-</div>
-
-<!-- ── Sağ üst: admin panel ───────────────── -->
-<div id="adminPanel">
-    <div id="adminInputRow">
-        <input type="url" id="newUrl" placeholder="Video linki...">
-        <button class="abtn" onclick="addToQueue()">+ Ekle</button>
-        <button class="abtn secondary" onclick="playNow()">▶ Şimdi</button>
+    <div id="qbar" class="hide">
+        <span class="qlbl">Sıra</span>
+        <button id="nxtBtn">▶ Sıradaki</button>
     </div>
-</div>
 
-<!-- ── Sağ alt: chat + tam ekran ─────────── -->
-<div id="bottomRight">
-    <div id="chatWin">
-        <div class="chat-hdr">Sohbet</div>
-        <div id="msgs"></div>
-        <div class="chat-inp">
-            <input type="text" id="mInp" placeholder="Mesaj yaz...">
-            <button id="mSend">➤</button>
+    <div id="ap">
+        <div id="apRow">
+            <input type="url" id="newUrl" placeholder="Video linki...">
+            <button class="ab" onclick="addQ()">+ Ekle</button>
+            <button class="ab s" onclick="playNow()">▶ Şimdi</button>
         </div>
     </div>
-    <div id="btnRow">
-        <button class="circ-btn" id="fsBtn" title="Tam Ekran">⛶</button>
-        <button class="circ-btn" id="chatBtn" title="Sohbet">
-            💬
-            <div id="unreadBadge"></div>
-        </button>
+
+    <div id="br">
+        <div id="cw">
+            <div class="chdr">Sohbet</div>
+            <div id="msgs"></div>
+            <div class="ci">
+                <input type="text" id="mInp" placeholder="Mesaj yaz...">
+                <button id="mSend">➤</button>
+            </div>
+        </div>
+        <div id="btnRow">
+            <button class="cb" id="fsBtn">⛶</button>
+            <button class="cb" id="chatBtn">
+                <span id="chatIco">💬</span>
+                <div id="ub"></div>
+            </button>
+        </div>
     </div>
+
 </div>
 
-<!-- ── Firebase ───────────────────────────── -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script>
-    firebase.initializeApp({ apiKey: "AIzaSyDtl18Hp2i2P_r6Xry_5xuBkp7gaysrlTY", authDomain: "film-7ac05.firebaseapp.com", projectId: "film-7ac05", storageBucket: "film-7ac05.firebasestorage.app", messagingSenderId: "650477853428", appId: "1:650477853428:web:49a179ee55a32dbdb21ca1" });
-    const db = firebase.firestore();
+firebase.initializeApp({
+    apiKey:"AIzaSyDtl18Hp2i2P_r6Xry_5xuBkp7gaysrlTY",
+    authDomain:"film-7ac05.firebaseapp.com",
+    projectId:"film-7ac05",
+    storageBucket:"film-7ac05.firebasestorage.app",
+    messagingSenderId:"650477853428",
+    appId:"1:650477853428:web:49a179ee55a32dbdb21ca1"
+});
+const db = firebase.firestore();
 
-    const params   = new URLSearchParams(window.location.search);
-    const roomCode = params.get('room');
-    const userName = params.get('name') || 'Anonim';
-    let isAdmin = false, ytPlayer, currentUrl = '';
+const ps       = new URLSearchParams(location.search);
+const ROOM     = ps.get('room') || '';
+const ME       = ps.get('name') || 'Anonim';
+let isAdmin    = false;
+let ytPlayer   = null;
+let ytReady    = false;      // YT API yüklenince true
+let pendingYT  = null;       // API hazır değilken bekleyen videoId
+let curUrl     = '';
 
-    document.getElementById('cDisp').textContent = roomCode;
+document.getElementById('cDisp').textContent = ROOM;
 
-    /* ── Room listener ─────────────────────── */
-    db.collection('rooms').doc(roomCode).onSnapshot(doc => {
-        const d = doc.data(); if (!d) return;
-        isAdmin = (d.admin === userName);
-        document.getElementById('uDisp').textContent = (isAdmin ? '👑 ' : '👤 ') + userName;
-        if (isAdmin) document.getElementById('adminPanel').style.display = 'flex';
+/* ── YT API callback (global) ── */
+window.onYouTubeIframeAPIReady = function(){
+    ytReady = true;
+    if(pendingYT) createYT(pendingYT);
+};
 
-        renderQueue(d.queue || [], d.queueIndex || 0);
+/* ── Yardımcılar ── */
+function $id(id){ return document.getElementById(id); }
+function showEl(el){ el.style.display = 'block'; }
+function hideEl(el){ el.style.display = 'none'; }
 
-        if (currentUrl !== d.url) { currentUrl = d.url; loadPlayer(d); }
-        if (!isAdmin) syncClient(d);
+function detectType(url){
+    if(!url) return 'direct';
+    if(url.includes('youtube.com')||url.includes('youtu.be')) return 'youtube';
+    if(url.includes('drive.google.com')) return 'drive';
+    if(/\.(mp4|webm|m3u8)/i.test(url)) return 'direct';
+    return 'iframe';
+}
+
+/* ── Room dinleyici ── */
+db.collection('rooms').doc(ROOM).onSnapshot(doc => {
+    const d = doc.data();
+    if(!d) return;
+
+    isAdmin = (d.admin === ME);
+    $id('uDisp').textContent = (isAdmin ? '👑 ' : '👤 ') + ME;
+    $id('ap').style.display  = isAdmin ? 'flex' : 'none';
+
+    renderQueue(d.queue || [], d.queueIndex || 0);
+
+    if(curUrl !== d.url){ curUrl = d.url; loadPlayer(d); }
+    if(!isAdmin) syncClient(d);
+});
+
+/* ── Sıra render ── */
+function renderQueue(queue, active){
+    const bar = $id('qbar');
+    const nb  = $id('nxtBtn');
+    bar.querySelectorAll('.qp').forEach(e => e.remove());
+
+    if(!queue.length){ bar.classList.add('hide'); nb.style.display='none'; return; }
+    bar.classList.remove('hide');
+
+    queue.forEach((item, i) => {
+        const p   = document.createElement('div');
+        p.className = 'qp' + (i===active?' on':'');
+
+        const n = document.createElement('span'); n.className='n'; n.textContent=i+1;
+        const t = document.createElement('span'); t.className='t';
+        try{ t.textContent = new URL(item.url).hostname.replace('www.',''); }
+        catch(e){ t.textContent = item.url.slice(0,18)+'…'; }
+        t.title = item.url;
+
+        p.appendChild(n); p.appendChild(t);
+
+        if(isAdmin){
+            const d2 = document.createElement('span');
+            d2.className='qdel'; d2.textContent='✕';
+            d2.onclick = ev=>{ ev.stopPropagation(); removeQ(i); };
+            p.appendChild(d2);
+        }
+        bar.insertBefore(p, nb);
     });
+    nb.style.display = (isAdmin && queue.length>1) ? 'flex' : 'none';
+}
 
-    /* ── Queue render ──────────────────────── */
-    function renderQueue(queue, activeIdx) {
-        const bar     = document.getElementById('queueBar');
-        const nextBtn = document.getElementById('nextBtn');
+/* ── Sıra işlemleri ── */
+function addQ(){
+    const url = $id('newUrl').value.trim(); if(!url) return;
+    db.collection('rooms').doc(ROOM).get().then(doc=>{
+        const d = doc.data(); const q = (d.queue||[]).slice();
+        q.push({url});
+        const upd = {queue:q};
+        if(q.length===1) Object.assign(upd,{url,type:detectType(url),queueIndex:0,status:0,time:0});
+        db.collection('rooms').doc(ROOM).update(upd);
+        $id('newUrl').value='';
+    });
+}
 
-        bar.querySelectorAll('.q-pill').forEach(e => e.remove());
+function playNow(){
+    const url = $id('newUrl').value.trim(); if(!url) return;
+    db.collection('rooms').doc(ROOM).get().then(doc=>{
+        const d = doc.data(); const q = (d.queue||[]).slice();
+        q.unshift({url});
+        db.collection('rooms').doc(ROOM).update({url,type:detectType(url),queue:q,queueIndex:0,status:0,time:0});
+        $id('newUrl').value='';
+    });
+}
 
-        if (queue.length === 0) { bar.classList.add('hidden'); nextBtn.style.display = 'none'; return; }
-        bar.classList.remove('hidden');
+function removeQ(idx){
+    db.collection('rooms').doc(ROOM).get().then(doc=>{
+        const d=doc.data(); const q=(d.queue||[]).slice(); let qi=d.queueIndex||0;
+        q.splice(idx,1); if(qi>=q.length) qi=Math.max(0,q.length-1);
+        db.collection('rooms').doc(ROOM).update({queue:q,queueIndex:qi});
+    });
+}
 
-        queue.forEach((item, i) => {
-            const pill = document.createElement('div');
-            pill.className = 'q-pill' + (i === activeIdx ? ' playing' : '');
+$id('nxtBtn').onclick = ()=>{
+    db.collection('rooms').doc(ROOM).get().then(doc=>{
+        const d=doc.data(); const q=d.queue||[]; if(q.length<2) return;
+        const idx=((d.queueIndex||0)+1)%q.length;
+        db.collection('rooms').doc(ROOM).update({url:q[idx].url,type:detectType(q[idx].url),queueIndex:idx,status:0,time:0});
+    });
+};
 
-            const num = document.createElement('span');
-            num.className = 'pn';
-            num.textContent = i + 1;
+/* ── Player ── */
+function loadPlayer(d){
+    const ytWrap = $id('yt-wrap');
+    const vid    = $id('vid');
+    const ifr    = $id('ifr');
+    const err    = $id('ifrErr');
 
-            const lbl = document.createElement('span');
-            try { lbl.textContent = new URL(item.url).hostname.replace('www.',''); }
-            catch(e) { lbl.textContent = item.url.slice(0,18) + '…'; }
-            lbl.title = item.url;
-            lbl.style.cssText = 'overflow:hidden;text-overflow:ellipsis;max-width:90px;';
+    hideEl(ytWrap); hideEl(vid); hideEl(ifr); hideEl(err);
+    // iframe src'yi sıfırla (eski video kalmasın)
+    ifr.src = 'about:blank';
 
-            pill.appendChild(num);
-            pill.appendChild(lbl);
+    if(!d.url) return;
+    const url  = d.url;
+    const type = d.type || detectType(url);
 
-            if (isAdmin) {
-                const del = document.createElement('span');
-                del.className = 'q-del'; del.textContent = '✕';
-                del.onclick = e => { e.stopPropagation(); removeFromQueue(i); };
-                pill.appendChild(del);
+    if(type==='youtube'||url.includes('youtube.com')||url.includes('youtu.be')){
+        const m = url.match(/(?:youtu\.be\/|[?&]v=)([\w\-]{11})/);
+        if(!m) return;
+        const vId = m[1];
+        showEl(ytWrap);
+        if(ytPlayer){
+            ytPlayer.loadVideoById(vId);
+        } else if(ytReady){
+            createYT(vId);
+        } else {
+            pendingYT = vId;
+        }
+
+    } else if(type==='drive'||url.includes('drive.google.com')){
+        const src = url.includes('/view') ? url.replace('/view','/preview') : url;
+        ifr.src = src;
+        showEl(ifr);
+
+    } else if(type==='direct'||/\.(mp4|webm|m3u8)/i.test(url)){
+        vid.src = url;
+        vid.controls = isAdmin;
+        showEl(vid);
+        if(isAdmin){
+            vid.onplay  = ()=>db.collection('rooms').doc(ROOM).update({status:1,time:vid.currentTime});
+            vid.onpause = ()=>db.collection('rooms').doc(ROOM).update({status:0,time:vid.currentTime});
+        }
+
+    } else {
+        ifr.src = url;
+        showEl(ifr);
+        if(url.includes('google.com')) showEl(err);
+    }
+}
+
+function createYT(vId){
+    // yt-wrap içini temizle ve yeni div ekle
+    const wrap = $id('yt-wrap');
+    wrap.innerHTML = '<div id="yt-player"></div>';
+    ytPlayer = new YT.Player('yt-player',{
+        videoId: vId,
+        width: '100%', height: '100%',
+        playerVars:{ controls:isAdmin?1:0, rel:0, playsinline:1 },
+        events:{
+            onStateChange: ev=>{
+                if(!isAdmin) return;
+                db.collection('rooms').doc(ROOM).update({
+                    status: ev.data===1?1:0,
+                    time: ev.target.getCurrentTime()
+                });
             }
+        }
+    });
+}
 
-            bar.insertBefore(pill, nextBtn);
-        });
+function syncClient(d){
+    const vid = $id('vid');
+    if(vid.style.display==='none') return;
+    if(d.status===1){
+        if(Math.abs(vid.currentTime-d.time)>3) vid.currentTime=d.time;
+        vid.play().catch(()=>{});
+    } else { vid.pause(); }
+}
 
-        nextBtn.style.display = (isAdmin && queue.length > 1) ? 'flex' : 'none';
+/* ── Tam Ekran ── */
+$id('fsBtn').onclick = ()=>{
+    const el = document.documentElement;
+    if(!document.fullscreenElement)
+        (el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen).call(el);
+    else
+        (document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen).call(document);
+};
+document.addEventListener('fullscreenchange',()=>{
+    $id('fsBtn').textContent = document.fullscreenElement ? '✕' : '⛶';
+});
+
+/* ── Chat ── */
+let chatOpen=false, unread=0, seen=0;
+
+$id('chatBtn').onclick = ()=>{
+    chatOpen = !chatOpen;
+    $id('cw').classList.toggle('open', chatOpen);
+    $id('chatBtn').classList.toggle('on', chatOpen);
+    $id('chatIco').textContent = chatOpen ? '✕' : '💬';
+    if(chatOpen){
+        unread=0; $id('ub').style.display='none';
+        setTimeout(()=>{ const m=$id('msgs'); m.scrollTop=m.scrollHeight; }, 60);
     }
+};
 
-    /* ── Queue actions ─────────────────────── */
-    function addToQueue() {
-        const url = document.getElementById('newUrl').value.trim(); if (!url) return;
-        db.collection('rooms').doc(roomCode).get().then(doc => {
-            const d = doc.data(), queue = d.queue || [];
-            queue.push({ url });
-            const update = { queue };
-            if (queue.length === 1) Object.assign(update, { url, type: detectType(url), queueIndex: 0, status: 0, time: 0 });
-            db.collection('rooms').doc(roomCode).update(update);
-            document.getElementById('newUrl').value = '';
-        });
+$id('mSend').onclick = sendMsg;
+$id('mInp').addEventListener('keydown', e=>{ if(e.key==='Enter') sendMsg(); });
+
+function sendMsg(){
+    const inp=$id('mInp'); const txt=inp.value.trim(); if(!txt) return;
+    db.collection('rooms').doc(ROOM).collection('messages').add({s:ME,t:txt,ts:Date.now()});
+    inp.value='';
+}
+
+db.collection('rooms').doc(ROOM).collection('messages').orderBy('ts').onSnapshot(snap=>{
+    const box=$id('msgs'); box.innerHTML=''; let total=0;
+    snap.forEach(dc=>{
+        const m=dc.data();
+        const div=document.createElement('div');
+        div.className='msg'+(m.s===ME?' own':'');
+        div.innerHTML=`<b>${m.s}</b>${m.t}`;
+        box.appendChild(div); total++;
+    });
+    box.scrollTop=box.scrollHeight;
+
+    const fresh = total-seen; seen=total;
+    if(!chatOpen && fresh>0){
+        unread+=fresh;
+        const ub=$id('ub');
+        ub.textContent=unread>99?'99+':unread;
+        ub.style.display='flex';
+        ub.style.animation='none'; void ub.offsetWidth;
+        ub.style.animation='pop .3s cubic-bezier(.34,1.56,.64,1) both';
     }
-
-    function playNow() {
-        const url = document.getElementById('newUrl').value.trim(); if (!url) return;
-        db.collection('rooms').doc(roomCode).get().then(doc => {
-            const d = doc.data(), q
+    if(chatOpen){ unread=0; $id('ub').style.display='none'; }
+});
+</script>
+<script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>
